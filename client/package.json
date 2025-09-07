@@ -1,26 +1,41 @@
 {
-  "name": "client",
+  "name": "webrtc-video-call-client",
   "version": "0.1.0",
   "private": true,
+  "description": "Video calling application like Google Meet - Client",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next out dist"
   },
   "dependencies": {
+    "@apollo/client": "^3.8.8",
+    "clsx": "^2.0.0",
+    "graphql": "^16.8.1",
+    "graphql-ws": "^5.14.2",
     "lucide-react": "^0.542.0",
     "next": "15.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^8",
+    "eslint-config-next": "15.4.6",
+    "postcss": "^8",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
