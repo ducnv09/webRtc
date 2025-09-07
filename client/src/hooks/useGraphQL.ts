@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useSubscription } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client';
 import { GET_ROOMS, GET_ROOM } from '../graphql/queries/rooms';
 import { GET_ROOM_MESSAGES } from '../graphql/queries/messages';
 import { CREATE_ROOM_MUTATION, JOIN_ROOM_MUTATION, LEAVE_ROOM_MUTATION } from '../graphql/mutations/rooms';

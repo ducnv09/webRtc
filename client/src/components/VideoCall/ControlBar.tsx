@@ -1,6 +1,5 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '../ui/Button';
 
 interface ControlBarProps {
   isVideoEnabled: boolean;
@@ -29,7 +28,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 px-6 py-4">
+    <div className="bg-gray-800 px-6 py-4 flex-shrink-0">
       <div className="flex items-center justify-center space-x-4">
         {/* Audio Toggle */}
         <button

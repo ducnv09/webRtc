@@ -28,13 +28,13 @@ export class AuthResolver {
   @Query(() => User)
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: any): Promise<User> {
-    return this.userService.findById(user.userId);
+    return this.userService.findById(user.id);
   }
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard)
   async logout(@CurrentUser() user: any): Promise<boolean> {
-    await this.userService.updateOnlineStatus(user.userId, false);
+    await this.userService.updateOnlineStatus(user.id, false);
     return true;
   }
 

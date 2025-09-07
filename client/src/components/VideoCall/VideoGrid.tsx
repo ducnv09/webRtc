@@ -22,7 +22,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   };
 
   return (
-    <div className="flex-1 p-4">
+    <div className="flex-1 p-4 overflow-hidden">
       <div className={`grid ${getGridClass()} gap-4 h-full`}>
         {localStream && (
           <VideoTile

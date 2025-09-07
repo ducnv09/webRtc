@@ -4,7 +4,6 @@ import { useRoomMessages, useSendMessage } from '../../hooks/useGraphQL';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuthContext } from '../../providers/AuthProvider';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { formatTime } from '../../lib/utils';
 import { Message, MessageType } from '../../types/message';
 
@@ -41,6 +40,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
         socket.off('new-message');
       };
     }
+
+    return () => {}; // Return empty cleanup function if no socket
   }, [socket, roomId]);
 
   useEffect(() => {

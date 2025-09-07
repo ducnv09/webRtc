@@ -92,31 +92,65 @@ export const useWebRTC = (roomId: string) => {
   const shareScreen = useCallback(async () => {
     try {
       if (isScreenSharing) {
-        // Stop screen sharing
+        // Stop screen sharing - return to camera
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
+
+        // Update local stream
         setLocalStream(stream);
         setIsScreenSharing(false);
+
+        // Update all peer connections with new stream
+        peerConnections.current.forEach(({ pc }) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (sender && stream.getVideoTracks()[0]) {
+            sender.replaceTrack(stream.getVideoTracks()[0]);
+          }
+        });
       } else {
         // Start screen sharing
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: true,
         });
+
+        // Update local stream
         setLocalStream(screenStream);
         setIsScreenSharing(true);
 
+        // Update all peer connections with screen stream
+        peerConnections.current.forEach(({ pc }) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (sender && screenStream.getVideoTracks()[0]) {
+            sender.replaceTrack(screenStream.getVideoTracks()[0]);
+          }
+        });
+
+        // Handle screen share end
         screenStream.getVideoTracks()[0].onended = () => {
           setIsScreenSharing(false);
-          startCall(); // Return to camera
+          // Return to camera when screen sharing ends
+          navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          }).then(stream => {
+            setLocalStream(stream);
+            // Update peer connections
+            peerConnections.current.forEach(({ pc }) => {
+              const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+              if (sender && stream.getVideoTracks()[0]) {
+                sender.replaceTrack(stream.getVideoTracks()[0]);
+              }
+            });
+          });
         };
       }
     } catch (error) {
       console.error('Error sharing screen:', error);
     }
-  }, [isScreenSharing, startCall]);
+  }, [isScreenSharing]);
 
   const endCall = useCallback(() => {
     if (localStream) {

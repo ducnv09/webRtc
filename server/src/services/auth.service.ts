@@ -45,12 +45,12 @@ export class AuthService {
       email: user.email,
     });
 
+    // Destructure để loại bỏ password field
+    const { password: _, ...userWithoutPassword } = user;
+
     return {
       accessToken,
-      user: {
-        ...user,
-        password: undefined, // Don't return password
-      },
+      user: userWithoutPassword,
     };
   }
 
@@ -84,11 +84,13 @@ export class AuthService {
       email: user.email,
     });
 
+    // Destructure để loại bỏ password field
+    const { password: __, ...userWithoutPassword } = user;
+
     return {
       accessToken,
       user: {
-        ...user,
-        password: undefined,
+        ...userWithoutPassword,
         isOnline: true,
       },
     };

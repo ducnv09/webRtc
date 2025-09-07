@@ -1,0 +1,147 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AuthResponse {
+  accessToken: String!
+  user: User!
+}
+
+input CreateMessageInput {
+  content: String!
+  roomId: String!
+  type: MessageType! = TEXT
+}
+
+input CreateRoomInput {
+  description: String
+  maxMembers: Int! = 10
+  name: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+type Message {
+  content: String!
+  createdAt: DateTime!
+  id: ID!
+  room: Room
+  roomId: String!
+  type: MessageType!
+  user: User!
+  userId: String!
+}
+
+type MessageSentEvent {
+  message: Message!
+  roomId: String!
+}
+
+enum MessageType {
+  FILE
+  IMAGE
+  SYSTEM
+  TEXT
+}
+
+type Mutation {
+  createRoom(input: CreateRoomInput!): Room!
+  deleteMessage(messageId: String!): Boolean!
+  deleteRoom(roomId: String!): Boolean!
+  joinRoom(roomId: String!): Boolean!
+  leaveRoom(roomId: String!): Boolean!
+  login(input: LoginInput!): AuthResponse!
+  logout: Boolean!
+  register(input: RegisterInput!): AuthResponse!
+  sendMessage(input: CreateMessageInput!): Message!
+  updateOnlineStatus(isOnline: Boolean!): Boolean!
+  updateRoom(input: UpdateRoomInput!, roomId: String!): Room!
+}
+
+type Query {
+  me: User!
+  room(id: String!): Room!
+  roomMembers(roomId: String!): [User!]!
+  roomMessages(limit: Float! = 50, offset: Float! = 0, roomId: String!): [Message!]!
+  rooms: [Room!]!
+}
+
+input RegisterInput {
+  avatar: String
+  email: String!
+  password: String!
+  username: String!
+}
+
+type Room {
+  createdAt: DateTime!
+  creator: User!
+  creatorId: String!
+  description: String
+  id: ID!
+  isActive: Boolean!
+  maxMembers: Float!
+  members: [RoomMember!]!
+  messages: [Message!]
+  name: String!
+  updatedAt: DateTime!
+}
+
+type RoomMember {
+  id: ID!
+  joinedAt: DateTime!
+  room: Room
+  roomId: String!
+  user: User!
+  userId: String!
+}
+
+type RoomUpdatedEvent {
+  room: Room!
+}
+
+type Subscription {
+  messageSent(roomId: String!): MessageSentEvent!
+  roomCreated: Room!
+  roomUpdated(roomId: String!): RoomUpdatedEvent!
+  userJoinedRoom(roomId: String!): UserJoinedRoomEvent!
+  userLeftRoom(roomId: String!): UserLeftRoomEvent!
+}
+
+input UpdateRoomInput {
+  description: String
+  isActive: Boolean
+  maxMembers: Int
+  name: String
+}
+
+type User {
+  avatar: String
+  createdAt: DateTime!
+  createdRooms: [Room!]
+  email: String!
+  id: ID!
+  isOnline: Boolean!
+  messages: [Message!]
+  roomMembers: [RoomMember!]
+  updatedAt: DateTime!
+  username: String!
+}
+
+type UserJoinedRoomEvent {
+  roomId: String!
+  user: User!
+}
+
+type UserLeftRoomEvent {
+  roomId: String!
+  userId: String!
+}

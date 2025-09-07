@@ -11,6 +11,7 @@ const httpLink = createHttpLink({
 const wsLink = new GraphQLWsLink(createClient({
   url: process.env.NEXT_PUBLIC_GRAPHQL_WS_URL || 'ws://localhost:3001/graphql',
   connectionParams: () => {
+    if (typeof window === 'undefined') return {};
     const token = localStorage.getItem('accessToken');
     return {
       authorization: token ? `Bearer ${token}` : '',
@@ -19,6 +20,9 @@ const wsLink = new GraphQLWsLink(createClient({
 }));
 
 const authLink = setContext((_, { headers }) => {
+  if (typeof window === 'undefined') {
+    return { headers };
+  }
   const token = localStorage.getItem('accessToken');
   return {
     headers: {

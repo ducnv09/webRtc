@@ -20,9 +20,9 @@ export class MessageResolver {
     @Args('input') input: CreateMessageInput,
     @CurrentUser() user: any,
   ): Promise<Message> {
-    const message = await this.messageService.createMessage(input, user.userId);
-    pubSub.publish('messageSent', { 
-      messageSent: { roomId: input.roomId, message } 
+    const message = await this.messageService.createMessage(input, user.id);
+    pubSub.publish('messageSent', {
+      messageSent: { roomId: input.roomId, message }
     });
     return message;
   }
@@ -35,7 +35,7 @@ export class MessageResolver {
     @Args('offset', { defaultValue: 0 }) offset: number,
     @CurrentUser() user: any,
   ): Promise<Message[]> {
-    return this.messageService.getRoomMessages(roomId, user.userId, limit, offset);
+    return this.messageService.getRoomMessages(roomId, user.id, limit, offset);
   }
 
   @Mutation(() => Boolean)
@@ -44,7 +44,7 @@ export class MessageResolver {
     @Args('messageId') messageId: string,
     @CurrentUser() user: any,
   ): Promise<boolean> {
-    return this.messageService.deleteMessage(messageId, user.userId);
+    return this.messageService.deleteMessage(messageId, user.id);
   }
 
   @Subscription(() => MessageSentEvent)

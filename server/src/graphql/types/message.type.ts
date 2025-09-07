@@ -1,13 +1,10 @@
 import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
 import { User } from './user.type';
 import { Room } from './room.type';
+import { MessageType } from '@prisma/client';
 
-export enum MessageType {
-  TEXT = 'TEXT',
-  IMAGE = 'IMAGE',
-  FILE = 'FILE',
-  SYSTEM = 'SYSTEM',
-}
+// Export MessageType để các file khác có thể import
+export { MessageType };
 
 registerEnumType(MessageType, {
   name: 'MessageType',
@@ -21,7 +18,7 @@ export class Message {
   @Field()
   content: string;
 
-  @Field(() => MessageType)
+  @Field(() => MessageType) // enum dùng chung
   type: MessageType;
 
   @Field()
@@ -36,6 +33,6 @@ export class Message {
   @Field(() => User)
   user: User;
 
-  @Field(() => Room)
-  room: Room;
+  @Field(() => Room, { nullable: true })
+  room?: Partial<Room>;
 }

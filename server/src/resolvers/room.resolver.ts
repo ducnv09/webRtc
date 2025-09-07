@@ -25,7 +25,7 @@ export class RoomResolver {
     @Args('input') input: CreateRoomInput,
     @CurrentUser() user: any,
   ): Promise<Room> {
-    const room = await this.roomService.create(input, user.userId);
+    const room = await this.roomService.create(input, user.id);
     pubSub.publish('roomCreated', { roomCreated: room });
     return room;
   }
@@ -48,15 +48,15 @@ export class RoomResolver {
     @Args('roomId') roomId: string,
     @CurrentUser() user: any,
   ): Promise<boolean> {
-    const result = await this.roomService.joinRoom(roomId, user.userId);
-    
+    const result = await this.roomService.joinRoom(roomId, user.id);
+
     if (result) {
       const userInfo = await this.roomService.findById(roomId);
-      pubSub.publish('userJoinedRoom', { 
-        userJoinedRoom: { roomId, user: userInfo } 
+      pubSub.publish('userJoinedRoom', {
+        userJoinedRoom: { roomId, user: userInfo }
       });
     }
-    
+
     return result;
   }
 
@@ -66,14 +66,14 @@ export class RoomResolver {
     @Args('roomId') roomId: string,
     @CurrentUser() user: any,
   ): Promise<boolean> {
-    const result = await this.roomService.leaveRoom(roomId, user.userId);
-    
+    const result = await this.roomService.leaveRoom(roomId, user.id);
+
     if (result) {
-      pubSub.publish('userLeftRoom', { 
-        userLeftRoom: { roomId, userId: user.userId } 
+      pubSub.publish('userLeftRoom', {
+        userLeftRoom: { roomId, userId: user.id }
       });
     }
-    
+
     return result;
   }
 
@@ -84,7 +84,7 @@ export class RoomResolver {
     @Args('input') input: UpdateRoomInput,
     @CurrentUser() user: any,
   ): Promise<Room> {
-    const room = await this.roomService.updateRoom(roomId, user.userId, input);
+    const room = await this.roomService.updateRoom(roomId, user.id, input);
     pubSub.publish('roomUpdated', { roomUpdated: room });
     return room;
   }
@@ -95,7 +95,7 @@ export class RoomResolver {
     @Args('roomId') roomId: string,
     @CurrentUser() user: any,
   ): Promise<boolean> {
-    return this.roomService.deleteRoom(roomId, user.userId);
+    return this.roomService.deleteRoom(roomId, user.id);
   }
 
   @Query(() => [User])

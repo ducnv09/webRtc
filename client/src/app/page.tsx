@@ -1,26 +1,43 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthContext } from '../providers/AuthProvider';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 export default function HomePage() {
-  const { user, loading } = useAuthContext();
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.push('/dashboard');
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      // Simple check for token without complex auth logic
+      const token = localStorage.getItem('accessToken');
+      console.log('Token exists:', !!token);
+
+      if (token) {
+        console.log('Redirecting to dashboard');
+        router.replace('/dashboard');
       } else {
-        router.push('/login');
+        console.log('Redirecting to login');
+        router.replace('/login');
       }
     }
-  }, [user, loading, router]);
+  }, [isClient, router]);
+
+  if (!isClient) {
+    return null; // Prevent hydration mismatch
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <LoadingSpinner size="lg" />
+    <div className="min-h-screen flex items-center justify-center bg-blue-50">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-blue-600 mb-4">WebRTC Video Call</h1>
+        <p className="text-gray-600 mb-8">Đang chuyển hướng...</p>
+        <LoadingSpinner size="lg" />
+      </div>
     </div>
   );
 }

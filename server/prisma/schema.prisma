@@ -53,7 +53,7 @@ model RoomMember {
     user        User        @relation(fields: [userId], references: [id])
     room        Room        @relation(fields: [roomId], references: [id])
 
-    @unique([userId, roomId])
+    @@unique([userId, roomId])
     @@map("room_members")
 }
 
@@ -73,8 +73,8 @@ model Message {
 }
 
 enum MessageType {
-    TEXT,
-    IMAGE,
-    FILE,
+    TEXT
+    IMAGE
+    FILE
     SYSTEM
 }

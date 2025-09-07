@@ -19,6 +19,6 @@ export class RoomMember {
   @Field(() => User)
   user: User;
 
-  @Field(() => Room)
-  room: Room;
+  @Field(() => Room, { nullable: true })
+  room?: Room;
 }

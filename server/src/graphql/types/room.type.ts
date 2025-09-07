@@ -11,8 +11,8 @@ export class Room {
   @Field()
   name: string;
 
-  @Field({ nullable: true })
-  description?: string;
+  @Field(() => String, { nullable: true })
+  description?: string | null;
 
   @Field()
   isActive: boolean;
@@ -35,6 +35,6 @@ export class Room {
   @Field(() => [RoomMember])
   members: RoomMember[];
 
-  @Field(() => [Message])
-  messages: Message[];
+  @Field(() => [Message], { nullable: true })
+  messages?: Message[];
 }

@@ -14,8 +14,8 @@ export class User {
   @Field()
   email: string;
 
-  @Field({ nullable: true })
-  avatar?: string;
+  @Field(() => String, { nullable: true })
+  avatar?: string | null;
 
   @Field()
   isOnline: boolean;
@@ -26,12 +26,12 @@ export class User {
   @Field()
   updatedAt: Date;
 
-  @Field(() => [Room])
-  createdRooms: Room[];
+  @Field(() => [Room], { nullable: true })
+  createdRooms?: Room[];
 
-  @Field(() => [RoomMember])
-  roomMembers: RoomMember[];
+  @Field(() => [RoomMember], { nullable: true })
+  roomMembers?: RoomMember[];
 
-  @Field(() => [Message])
-  messages: Message[];
+  @Field(() => [Message], { nullable: true })
+  messages?: Message[];
 }

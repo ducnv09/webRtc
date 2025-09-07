@@ -1,24 +1,50 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { LOGIN_MUTATION, REGISTER_MUTATION, LOGOUT_MUTATION } from '../graphql/mutations/auth';
 import { ME_QUERY } from '../graphql/queries/auth';
-import { User, LoginInput, RegisterInput } from '../types/auth';
+import { User } from '../types/auth';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
-  const { data: meData, loading: meLoading } = useQuery(ME_QUERY, {
-    skip: !localStorage.getItem('accessToken'),
-    onCompleted: (data) => {
-      setUser(data.me);
-      setLoading(false);
-    },
-    onError: () => {
-      localStorage.removeItem('accessToken');
+  // Check for token on client side
+  useEffect(() => {
+    console.log('useEffect running, window:', typeof window);
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      console.log('Token check:', { token: !!token });
+
+      if (!token) {
+        console.log('No token, setting loading to false');
+        setLoading(false);
+      }
+      setInitialized(true);
+    }
+  }, []);
+
+  const { data: meData, loading: meLoading, error: meError } = useQuery(ME_QUERY, {
+    skip: typeof window === 'undefined' || !localStorage.getItem('accessToken'),
+  });
+
+  // Handle query results with useEffect instead of onCompleted/onError
+  useEffect(() => {
+    if (meData?.me) {
+      setUser(meData.me);
       setLoading(false);
     }
-  });
+  }, [meData]);
+
+  useEffect(() => {
+    if (meError) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+      }
+      setUser(null);
+      setLoading(false);
+    }
+  }, [meError]);
 
   const [loginMutation] = useMutation(LOGIN_MUTATION);
   const [registerMutation] = useMutation(REGISTER_MUTATION);
@@ -29,9 +55,12 @@ export const useAuth = () => {
       const { data } = await loginMutation({
         variables: { input: { email, password } }
       });
-      
-      localStorage.setItem('accessToken', data.login.accessToken);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('accessToken', data.login.accessToken);
+      }
       setUser(data.login.user);
+      setLoading(false);
     } catch (error) {
       throw error;
     }
@@ -42,9 +71,12 @@ export const useAuth = () => {
       const { data } = await registerMutation({
         variables: { input: { username, email, password, avatar } }
       });
-      
-      localStorage.setItem('accessToken', data.register.accessToken);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('accessToken', data.register.accessToken);
+      }
       setUser(data.register.user);
+      setLoading(false);
     } catch (error) {
       throw error;
     }
@@ -56,23 +88,23 @@ export const useAuth = () => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('accessToken');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+      }
       setUser(null);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setLoading(false);
-    }
-  }, []);
+  const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('accessToken');
+  const finalLoading = hasToken ? (loading || meLoading) : loading;
+  console.log('Auth state:', { user: !!user, loading: finalLoading, hasToken, meLoading, internalLoading: loading, initialized });
 
   return {
     user,
     login,
     register,
     logout,
-    loading: loading || meLoading,
+    loading: finalLoading,
   };
 };
