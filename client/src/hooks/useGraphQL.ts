@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from '@apollo/client';
 import { GET_ROOMS, GET_ROOM } from '../graphql/queries/rooms';
 import { GET_ROOM_MESSAGES } from '../graphql/queries/messages';
-import { CREATE_ROOM_MUTATION, JOIN_ROOM_MUTATION, LEAVE_ROOM_MUTATION } from '../graphql/mutations/rooms';
+import { CREATE_ROOM_MUTATION, JOIN_ROOM_MUTATION, LEAVE_ROOM_MUTATION, UPDATE_ROOM_MUTATION, DELETE_ROOM_MUTATION } from '../graphql/mutations/rooms';
 import { SEND_MESSAGE_MUTATION } from '../graphql/mutations/messages';
 
 export const useRooms = () => {
@@ -47,8 +47,24 @@ export const useCreateRoom = () => {
   const [createRoom, { loading, error }] = useMutation(CREATE_ROOM_MUTATION, {
     refetchQueries: [GET_ROOMS],
   });
-  
+
   return { createRoom, loading, error };
+};
+
+export const useUpdateRoom = () => {
+  const [updateRoom, { loading, error }] = useMutation(UPDATE_ROOM_MUTATION, {
+    refetchQueries: [GET_ROOMS],
+  });
+
+  return { updateRoom, loading, error };
+};
+
+export const useDeleteRoom = () => {
+  const [deleteRoom, { loading, error }] = useMutation(DELETE_ROOM_MUTATION, {
+    refetchQueries: [GET_ROOMS],
+  });
+
+  return { deleteRoom, loading, error };
 };
 
 export const useJoinRoom = () => {

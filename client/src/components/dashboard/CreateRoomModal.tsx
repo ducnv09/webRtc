@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useCreateRoom } from '../../hooks/useGraphQL';
+import { useCreateRoom, useUpdateRoom } from '../../hooks/useGraphQL';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -22,7 +22,10 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const [maxMembers, setMaxMembers] = useState(10);
   const [error, setError] = useState('');
 
-  const { createRoom, loading } = useCreateRoom();
+  const { createRoom, loading: createLoading } = useCreateRoom();
+  const { updateRoom, loading: updateLoading } = useUpdateRoom();
+
+  const loading = createLoading || updateLoading;
 
   useEffect(() => {
     if (editingRoom) {
@@ -52,18 +55,33 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     }
 
     try {
-      await createRoom({
-        variables: {
-          input: {
-            name: name.trim(),
-            description: description.trim() || undefined,
-            maxMembers,
+      if (editingRoom) {
+        // Update existing room
+        await updateRoom({
+          variables: {
+            roomId: editingRoom.id,
+            input: {
+              name: name.trim(),
+              description: description.trim() || undefined,
+              maxMembers,
+            },
           },
-        },
-      });
+        });
+      } else {
+        // Create new room
+        await createRoom({
+          variables: {
+            input: {
+              name: name.trim(),
+              description: description.trim() || undefined,
+              maxMembers,
+            },
+          },
+        });
+      }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra khi tạo phòng');
+      setError(err.message || (editingRoom ? 'Có lỗi xảy ra khi cập nhật phòng' : 'Có lỗi xảy ra khi tạo phòng'));
     }
   };
 

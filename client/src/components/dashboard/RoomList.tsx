@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { useRooms, useJoinRoom } from '../../hooks/useGraphQL';
+import { useRooms, useJoinRoom, useDeleteRoom } from '../../hooks/useGraphQL';
 import { useAuthContext } from '../../providers/AuthProvider';
 import { RoomCard } from './RoomCard';
 import { CreateRoomModal } from './CreateRoomModal';
@@ -15,6 +15,7 @@ export const RoomList: React.FC = () => {
   
   const { rooms, loading, error, refetch } = useRooms();
   const { joinRoom } = useJoinRoom();
+  const { deleteRoom, loading: deleteLoading } = useDeleteRoom();
   const { user } = useAuthContext();
   const router = useRouter();
 
@@ -34,8 +35,16 @@ export const RoomList: React.FC = () => {
 
   const handleDeleteRoom = async (roomId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
-      // Implement delete room mutation
-      console.log('Delete room:', roomId);
+      try {
+        await deleteRoom({
+          variables: { roomId }
+        });
+        // Refetch rooms after successful deletion
+        refetch();
+      } catch (error) {
+        console.error('Error deleting room:', error);
+        alert('Có lỗi xảy ra khi xóa phòng. Vui lòng thử lại.');
+      }
     }
   };
 
@@ -94,6 +103,7 @@ export const RoomList: React.FC = () => {
               onEdit={handleEditRoom}
               onDelete={handleDeleteRoom}
               isOwner={room.creatorId === user?.id}
+              deleteLoading={deleteLoading}
             />
           ))}
         </div>
