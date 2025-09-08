@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useSocket } from './useSocket';
+import { useVideoParticipants } from './useVideoParticipants';
 
 interface PeerConnection {
   pc: RTCPeerConnection;
@@ -12,9 +13,10 @@ export const useWebRTC = (roomId: string) => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  
+
   const peerConnections = useRef<Map<string, PeerConnection>>(new Map());
   const { socket } = useSocket('video');
+  const { participants, participantCount, isConnected } = useVideoParticipants(socket, roomId);
 
   const configuration: RTCConfiguration = {
     iceServers: [
@@ -55,17 +57,31 @@ export const useWebRTC = (roomId: string) => {
 
   const startCall = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      setLocalStream(stream);
+      console.log('Starting video call for room:', roomId);
 
+      // Emit join-video-room event first, regardless of media access
       if (socket) {
+        console.log('Emitting join-video-room event for room:', roomId);
         socket.emit('join-video-room', { roomId });
+      } else {
+        console.error('Socket not available when trying to join video room');
+        return;
+      }
+
+      // Try to get media stream
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        setLocalStream(stream);
+        console.log('Media stream obtained successfully');
+      } catch (mediaError) {
+        console.error('Error accessing media devices:', mediaError);
+        // Continue without media stream - user can still see others
       }
     } catch (error) {
-      console.error('Error accessing media devices:', error);
+      console.error('Error in startCall:', error);
     }
   }, [socket, roomId]);
 
@@ -172,64 +188,64 @@ export const useWebRTC = (roomId: string) => {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('user-joined-video', async ({ userId }) => {
-      const pc = createPeerConnection(userId);
+    socket.on('peer-joined', async ({ peerId }) => {
+      const pc = createPeerConnection(peerId);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      
+
       socket.emit('video-offer', {
-        offer,
-        to: userId,
         roomId,
+        targetPeerId: peerId,
+        offer,
       });
     });
 
-    socket.on('video-offer', async ({ offer, from }) => {
-      const pc = createPeerConnection(from);
+    socket.on('video-offer', async ({ offer, peerId }) => {
+      const pc = createPeerConnection(peerId);
       await pc.setRemoteDescription(offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      
+
       socket.emit('video-answer', {
-        answer,
-        to: from,
         roomId,
+        targetPeerId: peerId,
+        answer,
       });
     });
 
-    socket.on('video-answer', async ({ answer, from }) => {
-      const peerConnection = peerConnections.current.get(from);
+    socket.on('video-answer', async ({ answer, peerId }) => {
+      const peerConnection = peerConnections.current.get(peerId);
       if (peerConnection) {
         await peerConnection.pc.setRemoteDescription(answer);
       }
     });
 
-    socket.on('ice-candidate', async ({ candidate, from }) => {
-      const peerConnection = peerConnections.current.get(from);
+    socket.on('ice-candidate', async ({ candidate, peerId }) => {
+      const peerConnection = peerConnections.current.get(peerId);
       if (peerConnection) {
         await peerConnection.pc.addIceCandidate(candidate);
       }
     });
 
-    socket.on('user-left-video', ({ userId }) => {
-      const peerConnection = peerConnections.current.get(userId);
+    socket.on('peer-disconnected', ({ peerId }) => {
+      const peerConnection = peerConnections.current.get(peerId);
       if (peerConnection) {
         peerConnection.pc.close();
-        peerConnections.current.delete(userId);
+        peerConnections.current.delete(peerId);
       }
       setRemoteStreams(prev => {
         const newMap = new Map(prev);
-        newMap.delete(userId);
+        newMap.delete(peerId);
         return newMap;
       });
     });
 
     return () => {
-      socket.off('user-joined-video');
+      socket.off('peer-joined');
       socket.off('video-offer');
       socket.off('video-answer');
       socket.off('ice-candidate');
-      socket.off('user-left-video');
+      socket.off('peer-disconnected');
     };
   }, [socket, createPeerConnection, roomId]);
 
@@ -239,6 +255,9 @@ export const useWebRTC = (roomId: string) => {
     isVideoEnabled,
     isAudioEnabled,
     isScreenSharing,
+    participants,
+    participantCount,
+    isConnected,
     startCall,
     endCall,
     toggleVideo,

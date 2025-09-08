@@ -28,6 +28,9 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
     isVideoEnabled,
     isAudioEnabled,
     isScreenSharing,
+    participants,
+    participantCount,
+    isConnected,
     startCall,
     endCall,
     toggleVideo,
@@ -74,7 +77,13 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
         <div>
           <h1 className="text-white text-lg font-semibold">{room.name}</h1>
           <p className="text-gray-400 text-sm">
-            {room.members.length} thành viên
+            {isConnected && participantCount > 0 ? participantCount : room.members.length} thành viên
+            {isConnected && (
+              <span className="ml-2 inline-flex items-center">
+                <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                Trực tuyến
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -132,6 +141,8 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
             {isParticipantsOpen && (
               <ParticipantsList
                 participants={room.members}
+                onlineParticipants={participants}
+                participantCount={participantCount}
                 onClose={() => setIsParticipantsOpen(false)}
               />
             )}

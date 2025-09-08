@@ -27,9 +27,11 @@ class SocketService {
 
   connectVideo(token: string): Socket {
     if (this.videoSocket?.connected) {
+      console.log('Video socket already connected');
       return this.videoSocket;
     }
 
+    console.log('Connecting to video socket...');
     this.videoSocket = io(`${process.env.NEXT_PUBLIC_SERVER_URL}/video-call`, {
       auth: { token },
       transports: ['websocket'],
@@ -41,6 +43,10 @@ class SocketService {
 
     this.videoSocket.on('disconnect', () => {
       console.log('Video socket disconnected');
+    });
+
+    this.videoSocket.on('connect_error', (error) => {
+      console.error('Video socket connection error:', error);
     });
 
     return this.videoSocket;

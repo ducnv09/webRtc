@@ -30,16 +30,23 @@ export class VideoCallGateway implements OnGatewayConnection, OnGatewayDisconnec
   private socketUser = new Map<string, string>();      // socketId -> userId (tuỳ chọn)
 
   async handleConnection(client: Socket) {
-    // Có thể log nhẹ, tránh lộ thông tin trong prod
-    // console.log(`Video call client connected: ${client.id}`);
+    console.log(`Video call client connected: ${client.id}`);
   }
 
   async handleDisconnect(client: Socket) {
-    // console.log(`Video call client disconnected: ${client.id}`);
+    console.log(`Video call client disconnected: ${client.id}`);
     // Dọn set phòng + thông báo rời
     for (const [roomId, participants] of this.rooms) {
       if (participants.delete(client.id)) {
         this.server.to(roomId).emit('peer-disconnected', { peerId: client.id });
+
+        // Gửi cập nhật số lượng thành viên sau khi disconnect
+        const originalRoomId = roomId.replace('video-', '');
+        this.server.to(roomId).emit('room-participants-count', {
+          count: participants.size,
+          roomId: originalRoomId,
+        });
+
         if (participants.size === 0) this.rooms.delete(roomId);
       }
     }
@@ -53,6 +60,7 @@ export class VideoCallGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { roomId: string },
   ) {
     try {
+      console.log(`User ${client.data.user?.userId} joining video room: ${data.roomId}`);
       const roomId = `video-${data.roomId}`;
       const userId: string | undefined = client.data.user?.userId;
 
@@ -67,6 +75,8 @@ export class VideoCallGateway implements OnGatewayConnection, OnGatewayDisconnec
 
       if (userId) this.socketUser.set(client.id, userId);
 
+      console.log(`Room ${roomId} now has ${participants.size} participants`);
+
       // Thông báo người khác trong phòng
       client.to(roomId).emit('peer-joined', {
         peerId: client.id,
@@ -78,6 +88,17 @@ export class VideoCallGateway implements OnGatewayConnection, OnGatewayDisconnec
         .filter((id) => id !== client.id)
         .map((id) => ({ peerId: id, userId: this.socketUser.get(id) ?? null }));
       client.emit('room-peers', { peers });
+
+      // Gửi cập nhật số lượng thành viên cho tất cả người trong phòng (bao gồm cả người vừa join)
+      console.log(`Sending room-participants-count: ${participants.size} for room ${data.roomId}`);
+
+      // Sử dụng setTimeout để đảm bảo client đã join room hoàn toàn
+      setTimeout(() => {
+        this.server.in(roomId).emit('room-participants-count', {
+          count: participants.size,
+          roomId: data.roomId,
+        });
+      }, 100);
     } catch (err: any) {
       client.emit('video-error', { message: err?.message ?? 'Join room failed' });
     }
@@ -96,8 +117,18 @@ export class VideoCallGateway implements OnGatewayConnection, OnGatewayDisconnec
       const participants = this.rooms.get(roomId);
       if (participants?.delete(client.id)) {
         this.server.to(roomId).emit('peer-disconnected', { peerId: client.id });
+
+        // Gửi cập nhật số lượng thành viên sau khi có người rời
+        this.server.to(roomId).emit('room-participants-count', {
+          count: participants.size,
+          roomId: data.roomId,
+        });
+
         if (participants.size === 0) this.rooms.delete(roomId);
       }
+
+      // Xóa thông tin user khỏi socketUser map
+      this.socketUser.delete(client.id);
     } catch (err: any) {
       client.emit('video-error', { message: err?.message ?? 'Leave room failed' });
     }

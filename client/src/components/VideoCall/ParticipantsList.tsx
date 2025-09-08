@@ -1,21 +1,42 @@
 import React from 'react';
 import { RoomMember } from '../../types/user';
 
+interface OnlineParticipant {
+  peerId: string;
+  userId: string | null;
+}
+
 interface ParticipantsListProps {
   participants: RoomMember[];
+  onlineParticipants?: OnlineParticipant[];
+  participantCount?: number;
   onClose: () => void;
 }
 
 export const ParticipantsList: React.FC<ParticipantsListProps> = ({
   participants,
+  onlineParticipants = [],
+  participantCount,
   onClose,
 }) => {
+  // Tạo map để kiểm tra user nào đang online
+  const onlineUserIds = new Set(
+    onlineParticipants.map(p => p.userId).filter(Boolean)
+  );
+
+  // Hiển thị số lượng thành viên real-time nếu có
+  const displayCount = participantCount !== undefined ? participantCount : participants.length;
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <h3 className="text-lg font-semibold">
-          Thành viên ({participants.length})
+          Thành viên ({displayCount})
+          {participantCount !== undefined && (
+            <span className="ml-2 text-sm text-green-600">
+              ({onlineParticipants.length} đang online)
+            </span>
+          )}
         </h3>
         <button
           onClick={onClose}
@@ -55,10 +76,10 @@ export const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 </p>
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${
-                    member.user.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                    onlineUserIds.has(member.user.id) ? 'bg-green-500' : 'bg-gray-400'
                   }`} />
                   <p className="text-xs text-gray-500">
-                    {member.user.isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}
+                    {onlineUserIds.has(member.user.id) ? 'Đang trong cuộc gọi' : 'Ngoại tuyến'}
                   </p>
                 </div>
               </div>
