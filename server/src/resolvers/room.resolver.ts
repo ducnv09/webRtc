@@ -52,10 +52,15 @@ export class RoomResolver {
     const result = await this.roomService.joinRoom(roomId, user.id);
 
     if (result) {
-      const userInfo = await this.roomService.findById(roomId);
+      // Publish user joined event with correct user data
       pubSub.publish('userJoinedRoom', {
-        userJoinedRoom: { roomId, user: userInfo }
+        userJoinedRoom: { roomId, user: user }
       });
+
+      // Also publish room update to refresh member count
+      const updatedRoom = await this.roomService.findById(roomId);
+      pubSub.publish('roomUpdated', { roomUpdated: updatedRoom });
+      pubSub.publish('roomUpdatedGlobal', { roomUpdatedGlobal: updatedRoom });
     }
 
     return result;
@@ -73,6 +78,18 @@ export class RoomResolver {
       pubSub.publish('userLeftRoom', {
         userLeftRoom: { roomId, userId: user.id }
       });
+
+      // Check if room still exists and publish room update to refresh member count
+      try {
+        const updatedRoom = await this.roomService.findById(roomId);
+        if (updatedRoom && updatedRoom.isActive) {
+          pubSub.publish('roomUpdated', { roomUpdated: updatedRoom });
+          pubSub.publish('roomUpdatedGlobal', { roomUpdatedGlobal: updatedRoom });
+        }
+      } catch (error) {
+        // Room might have been deleted, ignore error
+        console.log('Room not found after user left, likely deleted');
+      }
     }
 
     return result;
@@ -130,6 +147,11 @@ export class RoomResolver {
   @Subscription(() => RoomUpdatedEvent)
   roomUpdated(@Args('roomId') roomId: string) {
     return pubSub.asyncIterator('roomUpdated');
+  }
+
+  @Subscription(() => Room)
+  roomUpdatedGlobal() {
+    return pubSub.asyncIterator('roomUpdatedGlobal');
   }
 
   @Subscription(() => RoomDeletedEvent)

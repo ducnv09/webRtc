@@ -34,7 +34,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-50">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-blue-600 mb-4">WebRTC Video Call</h1>
+        <h1 className="text-4xl font-bold text-blue-600 mb-4">Video Call</h1>
         <p className="text-gray-600 mb-8">Đang chuyển hướng...</p>
         <LoadingSpinner size="lg" />
       </div>

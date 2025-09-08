@@ -117,6 +117,7 @@ type Subscription {
   roomCreated: Room!
   roomDeleted: RoomDeletedEvent!
   roomUpdated(roomId: String!): RoomUpdatedEvent!
+  roomUpdatedGlobal: Room!
   userJoinedRoom(roomId: String!): UserJoinedRoomEvent!
   userLeftRoom(roomId: String!): UserLeftRoomEvent!
 }

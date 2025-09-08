@@ -9,7 +9,7 @@ import { Button } from '../ui/Button';
 import { Room } from '../../types/room';
 import { useRouter } from 'next/navigation';
 import { useSubscription, useApolloClient } from '@apollo/client';
-import { ROOM_CREATED_SUBSCRIPTION, ROOM_DELETED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
+import { ROOM_CREATED_SUBSCRIPTION, ROOM_DELETED_SUBSCRIPTION, ROOM_UPDATED_GLOBAL_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
 import { GET_ROOMS } from '../../graphql/queries/rooms';
 
 export const RoomList: React.FC = () => {
@@ -42,13 +42,17 @@ export const RoomList: React.FC = () => {
   // Subscribe to room deletion
   const { data: deletedRoomData } = useSubscription(ROOM_DELETED_SUBSCRIPTION);
 
+  // Subscribe to room updates (member count changes, etc.)
+  const { data: updatedRoomData } = useSubscription(ROOM_UPDATED_GLOBAL_SUBSCRIPTION);
+
   // Debug subscription
   useEffect(() => {
     console.log('Room subscriptions state:', {
       roomCreated: { loading: subLoading, error: subError, data: newRoomData },
-      roomDeleted: { data: deletedRoomData }
+      roomDeleted: { data: deletedRoomData },
+      roomUpdated: { data: updatedRoomData }
     });
-  }, [subLoading, subError, newRoomData, deletedRoomData]);
+  }, [subLoading, subError, newRoomData, deletedRoomData, updatedRoomData]);
 
   // Add new room to cache when subscription receives data
   useEffect(() => {
@@ -86,6 +90,36 @@ export const RoomList: React.FC = () => {
       }
     }
   }, [deletedRoomData, refetch]);
+
+  // Handle room updates (member count changes, etc.)
+  useEffect(() => {
+    if (updatedRoomData?.roomUpdatedGlobal) {
+      console.log('Room updated via subscription:', updatedRoomData.roomUpdatedGlobal);
+
+      // Update cache directly to reflect room changes immediately
+      const cache = apolloClient.cache;
+      try {
+        const existingRooms = cache.readQuery({ query: GET_ROOMS }) as any;
+        if (existingRooms?.rooms) {
+          const updatedRoom = updatedRoomData.roomUpdatedGlobal;
+          const updatedRooms = existingRooms.rooms.map((room: any) =>
+            room.id === updatedRoom.id ? updatedRoom : room
+          );
+
+          cache.writeQuery({
+            query: GET_ROOMS,
+            data: {
+              rooms: updatedRooms
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error updating cache after room update:', error);
+        // Fallback to refetch if cache update fails
+        refetch();
+      }
+    }
+  }, [updatedRoomData, refetch, apolloClient.cache]);
 
   // Temporary: Auto-refetch every 10 seconds to ensure real-time updates
   useEffect(() => {

@@ -8,7 +8,7 @@ import { SocketProvider } from '../providers/SocketProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'WebRTC Video Call',
+  title: 'Video Call',
   description: 'Video calling application like Google Meet',
 };
 

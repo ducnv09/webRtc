@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </Button>
 
             <h1 className="text-xl font-bold text-gray-900">
-              WebRTC Video Call
+              Video Call
             </h1>
           </div>
 
