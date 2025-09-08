@@ -48,23 +48,9 @@ export const ControlBar: React.FC<ControlBarProps> = ({
     try {
       await leaveRoom({ variables: { roomId } });
 
-      // Optimistically remove room from cache if it might be the last member
-      const cache = apolloClient.cache;
-      const existingRooms = cache.readQuery({ query: GET_ROOMS }) as any;
-
-      if (existingRooms?.rooms) {
-        const currentRoom = existingRooms.rooms.find((room: any) => room.id === roomId);
-
-        // If this room has only 1 member (current user), remove it from cache
-        if (currentRoom?.members?.length <= 1) {
-          cache.writeQuery({
-            query: GET_ROOMS,
-            data: {
-              rooms: existingRooms.rooms.filter((room: any) => room.id !== roomId)
-            }
-          });
-        }
-      }
+      // Don't optimistically remove room from cache when just leaving
+      // Let the subscription handle room updates properly
+      // The room should only be removed if it's actually deleted (no members left)
 
       onEndCall();
       router.push('/dashboard');

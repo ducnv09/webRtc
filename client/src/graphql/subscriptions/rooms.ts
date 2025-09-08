@@ -90,3 +90,32 @@ export const ROOM_DELETED_SUBSCRIPTION = gql`
     }
   }
 `;
+
+export const ROOM_UPDATED_GLOBAL_SUBSCRIPTION = gql`
+  subscription RoomUpdatedGlobal {
+    roomUpdatedGlobal {
+      id
+      name
+      description
+      isActive
+      maxMembers
+      createdAt
+      updatedAt
+      creatorId
+      creator {
+        id
+        username
+        avatar
+      }
+      members {
+        id
+        user {
+          id
+          username
+          avatar
+          isOnline
+        }
+      }
+    }
+  }
+`;

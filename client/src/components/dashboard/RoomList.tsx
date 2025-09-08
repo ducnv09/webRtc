@@ -8,8 +8,9 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Button } from '../ui/Button';
 import { Room } from '../../types/room';
 import { useRouter } from 'next/navigation';
-import { useSubscription } from '@apollo/client';
+import { useSubscription, useApolloClient } from '@apollo/client';
 import { ROOM_CREATED_SUBSCRIPTION, ROOM_DELETED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
+import { GET_ROOMS } from '../../graphql/queries/rooms';
 
 export const RoomList: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -33,6 +34,7 @@ export const RoomList: React.FC = () => {
   const { deleteRoom, loading: deleteLoading } = useDeleteRoom();
   const { user } = useAuthContext();
   const router = useRouter();
+  const apolloClient = useApolloClient();
 
   // Subscribe to new room creation
   const { data: newRoomData, loading: subLoading, error: subError } = useSubscription(ROOM_CREATED_SUBSCRIPTION);
@@ -65,10 +67,25 @@ export const RoomList: React.FC = () => {
     if (deletedRoomData?.roomDeleted) {
       console.log('Room deleted via subscription:', deletedRoomData.roomDeleted);
 
-      // Force re-render by refetching to remove deleted room
-      refetch();
+      // Update cache directly to remove deleted room immediately
+      const cache = apolloClient.cache;
+      try {
+        const existingRooms = cache.readQuery({ query: GET_ROOMS }) as any;
+        if (existingRooms?.rooms) {
+          cache.writeQuery({
+            query: GET_ROOMS,
+            data: {
+              rooms: existingRooms.rooms.filter((room: any) => room.id !== deletedRoomData.roomDeleted.id)
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error updating cache after room deletion:', error);
+        // Fallback to refetch if cache update fails
+        refetch();
+      }
     }
-  }, [deletedRoomData, refetch, rooms]);
+  }, [deletedRoomData, refetch]);
 
   // Temporary: Auto-refetch every 10 seconds to ensure real-time updates
   useEffect(() => {
