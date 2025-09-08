@@ -35,3 +35,9 @@ export class RoomUpdatedEvent {
   @Field(() => Room)
   room: Room;
 }
+
+@ObjectType()
+export class RoomDeletedEvent {
+  @Field(() => String)
+  id: string;
+}

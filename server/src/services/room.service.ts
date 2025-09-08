@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CreateRoomInput, UpdateRoomInput } from '../graphql/inputs/room.input';
+import { PubSub } from 'graphql-subscriptions';
+
+const pubSub = new PubSub();
 
 @Injectable()
 export class RoomService {
@@ -216,6 +219,9 @@ export class RoomService {
         where: { id: roomId },
         data: { isActive: false },
       });
+
+      // Publish room deletion event
+      pubSub.publish('roomDeleted', { roomDeleted: { id: roomId } });
     }
 
     return true;

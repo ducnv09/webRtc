@@ -7,10 +7,11 @@ import { Room } from '../graphql/types/room.type';
 import { User } from '../graphql/types/user.type';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { 
-  UserJoinedRoomEvent, 
-  UserLeftRoomEvent, 
-  RoomUpdatedEvent 
+import {
+  UserJoinedRoomEvent,
+  UserLeftRoomEvent,
+  RoomUpdatedEvent,
+  RoomDeletedEvent
 } from '../graphql/subscriptions/room.subscription';
 
 const pubSub = new PubSub();
@@ -123,5 +124,10 @@ export class RoomResolver {
   @Subscription(() => RoomUpdatedEvent)
   roomUpdated(@Args('roomId') roomId: string) {
     return pubSub.asyncIterator('roomUpdated');
+  }
+
+  @Subscription(() => RoomDeletedEvent)
+  roomDeleted() {
+    return pubSub.asyncIterator('roomDeleted');
   }
 }

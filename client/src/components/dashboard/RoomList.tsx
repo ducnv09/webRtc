@@ -9,14 +9,26 @@ import { Button } from '../ui/Button';
 import { Room } from '../../types/room';
 import { useRouter } from 'next/navigation';
 import { useSubscription } from '@apollo/client';
-import { ROOM_CREATED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
+import { ROOM_CREATED_SUBSCRIPTION, ROOM_DELETED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
 
 export const RoomList: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [isJoiningNewRoom, setIsJoiningNewRoom] = useState(false);
   
-  const { rooms, loading, error, refetch } = useRooms();
+  const { rooms: allRooms, loading, error, refetch } = useRooms();
+
+  // Filter out rooms with 0 members (should be auto-deleted)
+  const rooms = allRooms?.filter((room: Room) => room.members.length > 0) || [];
+
+  // Debug log
+  useEffect(() => {
+    console.log('Rooms data:', {
+      allRooms: allRooms?.length,
+      filteredRooms: rooms.length,
+      roomsWithZeroMembers: allRooms?.filter((room: Room) => room.members.length === 0).length
+    });
+  }, [allRooms, rooms]);
   const { joinRoom } = useJoinRoom();
   const { deleteRoom, loading: deleteLoading } = useDeleteRoom();
   const { user } = useAuthContext();
@@ -25,14 +37,16 @@ export const RoomList: React.FC = () => {
   // Subscribe to new room creation
   const { data: newRoomData, loading: subLoading, error: subError } = useSubscription(ROOM_CREATED_SUBSCRIPTION);
 
+  // Subscribe to room deletion
+  const { data: deletedRoomData } = useSubscription(ROOM_DELETED_SUBSCRIPTION);
+
   // Debug subscription
   useEffect(() => {
-    console.log('Subscription state:', {
-      loading: subLoading,
-      error: subError,
-      data: newRoomData
+    console.log('Room subscriptions state:', {
+      roomCreated: { loading: subLoading, error: subError, data: newRoomData },
+      roomDeleted: { data: deletedRoomData }
     });
-  }, [subLoading, subError, newRoomData]);
+  }, [subLoading, subError, newRoomData, deletedRoomData]);
 
   // Add new room to cache when subscription receives data
   useEffect(() => {
@@ -45,6 +59,16 @@ export const RoomList: React.FC = () => {
       }
     }
   }, [newRoomData, refetch, user?.id]);
+
+  // Handle room deletion
+  useEffect(() => {
+    if (deletedRoomData?.roomDeleted) {
+      console.log('Room deleted via subscription:', deletedRoomData.roomDeleted);
+
+      // Force re-render by refetching to remove deleted room
+      refetch();
+    }
+  }, [deletedRoomData, refetch, rooms]);
 
   // Temporary: Auto-refetch every 10 seconds to ensure real-time updates
   useEffect(() => {

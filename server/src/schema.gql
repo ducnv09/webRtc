@@ -95,6 +95,10 @@ type Room {
   updatedAt: DateTime!
 }
 
+type RoomDeletedEvent {
+  id: String!
+}
+
 type RoomMember {
   id: ID!
   joinedAt: DateTime!
@@ -111,6 +115,7 @@ type RoomUpdatedEvent {
 type Subscription {
   messageSent(roomId: String!): MessageSentEvent!
   roomCreated: Room!
+  roomDeleted: RoomDeletedEvent!
   roomUpdated(roomId: String!): RoomUpdatedEvent!
   userJoinedRoom(roomId: String!): UserJoinedRoomEvent!
   userLeftRoom(roomId: String!): UserLeftRoomEvent!

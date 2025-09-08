@@ -82,3 +82,11 @@ export const USER_LEFT_ROOM_SUBSCRIPTION = gql`
     }
   }
 `;
+
+export const ROOM_DELETED_SUBSCRIPTION = gql`
+  subscription RoomDeleted {
+    roomDeleted {
+      id
+    }
+  }
+`;
