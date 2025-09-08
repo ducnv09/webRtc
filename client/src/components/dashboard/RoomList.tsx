@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 export const RoomList: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [isJoiningNewRoom, setIsJoiningNewRoom] = useState(false);
   
   const { rooms, loading, error, refetch } = useRooms();
   const { joinRoom } = useJoinRoom();
@@ -54,6 +55,20 @@ export const RoomList: React.FC = () => {
     refetch();
   };
 
+  const handleRoomCreated = async (room: Room) => {
+    // Auto-join the newly created room
+    setIsJoiningNewRoom(true);
+    try {
+      await joinRoom({ variables: { roomId: room.id } });
+      router.push(`/room/${room.id}`);
+    } catch (error) {
+      console.error('Error joining newly created room:', error);
+      // If auto-join fails, just refresh the room list
+      refetch();
+      setIsJoiningNewRoom(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -73,6 +88,16 @@ export const RoomList: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Loading overlay when joining new room */}
+      {isJoiningNewRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 flex items-center space-x-3">
+            <LoadingSpinner size="md" />
+            <span className="text-gray-700">Đang tham gia phòng...</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Danh sách phòng</h2>
         <Button onClick={() => setIsCreateModalOpen(true)}>
@@ -113,6 +138,7 @@ export const RoomList: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={handleModalClose}
         editingRoom={editingRoom}
+        onRoomCreated={handleRoomCreated}
       />
     </div>
   );

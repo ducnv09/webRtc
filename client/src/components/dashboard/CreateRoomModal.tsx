@@ -10,12 +10,14 @@ interface CreateRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingRoom?: Room | null;
+  onRoomCreated?: (room: Room) => void;
 }
 
 export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   isOpen,
   onClose,
   editingRoom,
+  onRoomCreated,
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -69,7 +71,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
         });
       } else {
         // Create new room
-        await createRoom({
+        const result = await createRoom({
           variables: {
             input: {
               name: name.trim(),
@@ -78,6 +80,11 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
             },
           },
         });
+
+        // If room created successfully and callback provided, call it
+        if (result.data?.createRoom && onRoomCreated) {
+          onRoomCreated(result.data.createRoom);
+        }
       }
       onClose();
     } catch (err: any) {
@@ -143,7 +150,10 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
             type="submit"
             loading={loading}
           >
-            {editingRoom ? 'Cập nhật' : 'Tạo phòng'}
+            {loading
+              ? (editingRoom ? 'Đang cập nhật...' : 'Đang tạo phòng...')
+              : (editingRoom ? 'Cập nhật' : 'Tạo & Tham gia')
+            }
           </Button>
         </div>
       </form>
