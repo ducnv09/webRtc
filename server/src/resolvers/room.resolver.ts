@@ -96,7 +96,13 @@ export class RoomResolver {
     @Args('roomId') roomId: string,
     @CurrentUser() user: any,
   ): Promise<boolean> {
-    return this.roomService.deleteRoom(roomId, user.id);
+    const result = await this.roomService.deleteRoom(roomId, user.id);
+
+    if (result) {
+      pubSub.publish('roomDeleted', { roomDeleted: { id: roomId } });
+    }
+
+    return result;
   }
 
   @Query(() => [User])
