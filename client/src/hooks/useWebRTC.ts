@@ -13,6 +13,7 @@ export const useWebRTC = (roomId: string) => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
 
   const peerConnections = useRef<Map<string, PeerConnection>>(new Map());
   const { socket } = useSocket('video');
@@ -59,10 +60,17 @@ export const useWebRTC = (roomId: string) => {
     try {
       console.log('Starting video call for room:', roomId);
 
+      // Kiểm tra xem đã join room chưa để tránh join nhiều lần
+      if (hasJoinedRoom) {
+        console.log('Already joined room, skipping...');
+        return;
+      }
+
       // Emit join-video-room event first, regardless of media access
       if (socket) {
         console.log('Emitting join-video-room event for room:', roomId);
         socket.emit('join-video-room', { roomId });
+        setHasJoinedRoom(true);
       } else {
         console.error('Socket not available when trying to join video room');
         return;
@@ -83,7 +91,7 @@ export const useWebRTC = (roomId: string) => {
     } catch (error) {
       console.error('Error in startCall:', error);
     }
-  }, [socket, roomId]);
+  }, [socket, roomId, hasJoinedRoom]);
 
   const toggleVideo = useCallback(() => {
     if (localStream) {
@@ -179,6 +187,7 @@ export const useWebRTC = (roomId: string) => {
     });
     peerConnections.current.clear();
     setRemoteStreams(new Map());
+    setHasJoinedRoom(false); // Reset join status
 
     if (socket) {
       socket.emit('leave-video-room', { roomId });

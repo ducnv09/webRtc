@@ -46,7 +46,7 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
     return () => {
       endCall();
     };
-  }, [room, startCall, endCall]);
+  }, [room?.id]); // Chỉ phụ thuộc vào room.id để tránh re-run không cần thiết
 
   if (roomLoading) {
     return (
@@ -114,6 +114,9 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
             localStream={localStream}
             remoteStreams={remoteStreams}
             isVideoEnabled={isVideoEnabled}
+            currentUser={user}
+            participants={participants}
+            roomMembers={room?.members || []}
           />
           
           <ControlBar
