@@ -240,12 +240,22 @@ export const useWebRTC = (roomId: string) => {
       });
     });
 
+    // Lắng nghe khi chủ phòng kết thúc cuộc gọi
+    socket.on('room-ended-by-owner', (data: { roomId: string; message: string }) => {
+      console.log('Room ended by owner:', data);
+      alert(data.message);
+      endCall();
+      // Redirect về dashboard
+      window.location.href = '/dashboard';
+    });
+
     return () => {
       socket.off('peer-joined');
       socket.off('video-offer');
       socket.off('video-answer');
       socket.off('ice-candidate');
       socket.off('peer-disconnected');
+      socket.off('room-ended-by-owner');
     };
   }, [socket, createPeerConnection, roomId]);
 

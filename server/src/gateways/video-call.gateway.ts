@@ -4,12 +4,16 @@ import {
   SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
 import { UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { WsJwtGuard } from '../common/guards/ws-jwt.guard';
+import { PubSub } from 'graphql-subscriptions';
+
+const pubSub = new PubSub();
 
 type SdpOffer = RTCSessionDescriptionInit; // hoặc tự định nghĩa interface tối thiểu
 type SdpAnswer = RTCSessionDescriptionInit;
@@ -22,12 +26,75 @@ type IceCandidate = RTCIceCandidateInit;
     credentials: true,
   },
 })
-export class VideoCallGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class VideoCallGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
   @WebSocketServer()
   server: Server;
 
   private rooms: Map<string, Set<string>> = new Map(); // roomId -> socketId set
   private socketUser = new Map<string, string>();      // socketId -> userId (tuỳ chọn)
+
+  // Static instance để có thể gọi từ bên ngoài
+  private static instance: VideoCallGateway;
+
+  afterInit() {
+    console.log('VideoCallGateway initialized');
+    VideoCallGateway.instance = this;
+  }
+
+  // Static method để thông báo khi room bị xóa
+  static notifyRoomDeleted(roomId: string, ownerId: string) {
+    if (VideoCallGateway.instance) {
+      VideoCallGateway.instance.handleRoomDeleted(roomId, ownerId);
+    }
+  }
+
+  // Method để thông báo khi room bị xóa
+  private handleRoomDeleted(roomId: string, ownerId: string) {
+    console.log(`Room ${roomId} was deleted by owner ${ownerId}, notifying other video participants`);
+
+    const videoRoomId = `video-${roomId}`;
+    const participants = this.rooms.get(videoRoomId);
+
+    if (participants && participants.size > 0) {
+      console.log(`Participants in video room ${videoRoomId}:`, Array.from(participants));
+      console.log(`SocketUser mapping:`, Array.from(this.socketUser.entries()));
+
+      // Tìm socketId của chủ phòng
+      let ownerSocketId: string | null = null;
+      for (const [socketId, userId] of this.socketUser.entries()) {
+        console.log(`Checking socketId ${socketId} with userId ${userId} against ownerId ${ownerId}`);
+        if (userId === ownerId) {
+          ownerSocketId = socketId;
+          console.log(`Found owner socketId: ${ownerSocketId}`);
+          break;
+        }
+      }
+
+      console.log(`Owner socketId: ${ownerSocketId}`);
+
+      // Thông báo cho tất cả thành viên TRỪ chủ phòng
+      participants.forEach(socketId => {
+        const participantUserId = this.socketUser.get(socketId);
+        console.log(`Processing participant ${socketId} (userId: ${participantUserId})`);
+
+        // Kiểm tra cả socketId và userId để đảm bảo không gửi cho chủ phòng
+        const isOwner = (socketId === ownerSocketId) || (participantUserId === ownerId);
+
+        if (!isOwner) {
+          console.log(`Notifying participant ${socketId} (not owner)`);
+          this.server.to(socketId).emit('room-ended-by-owner', {
+            roomId,
+            message: 'Cuộc gọi đã được kết thúc bởi chủ phòng'
+          });
+        } else {
+          console.log(`Skipping notification for owner ${socketId} (reason: ${socketId === ownerSocketId ? 'socketId match' : 'userId match'})`);
+        }
+      });
+
+      // Xóa room khỏi memory
+      this.rooms.delete(videoRoomId);
+    }
+  }
 
   async handleConnection(client: Socket) {
     console.log(`Video call client connected: ${client.id}`);

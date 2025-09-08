@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { PrismaService } from './prisma.service';
 import { CreateRoomInput, UpdateRoomInput } from '../graphql/inputs/room.input';
 import { PubSub } from 'graphql-subscriptions';
+import { VideoCallGateway } from '../gateways/video-call.gateway';
 
 const pubSub = new PubSub();
 
@@ -269,6 +270,7 @@ export class RoomService {
   }
 
   async deleteRoom(roomId: string, userId: string) {
+    console.log(`Deleting room ${roomId} by user ${userId}`);
     const room = await this.findById(roomId);
 
     if (room.creatorId !== userId) {
@@ -279,6 +281,13 @@ export class RoomService {
       where: { id: roomId },
       data: { isActive: false },
     });
+
+    // Publish room deletion event for GraphQL subscriptions
+    pubSub.publish('roomDeleted', { roomDeleted: { id: roomId } });
+
+    // Thông báo cho video call gateway (truyền thêm userId của chủ phòng)
+    console.log(`Calling VideoCallGateway.notifyRoomDeleted with roomId: ${roomId}, userId: ${userId}`);
+    VideoCallGateway.notifyRoomDeleted(roomId, userId);
 
     return true;
   }
