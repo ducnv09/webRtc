@@ -205,6 +205,19 @@ export class RoomService {
       },
     });
 
+    // Check if this was the last member
+    const remainingMembers = await this.prisma.roomMember.count({
+      where: { roomId },
+    });
+
+    // If no members left, deactivate the room (auto-delete)
+    if (remainingMembers === 0) {
+      await this.prisma.room.update({
+        where: { id: roomId },
+        data: { isActive: false },
+      });
+    }
+
     return true;
   }
 

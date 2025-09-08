@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRooms, useJoinRoom, useDeleteRoom } from '../../hooks/useGraphQL';
 import { useAuthContext } from '../../providers/AuthProvider';
 import { RoomCard } from './RoomCard';
@@ -8,6 +8,8 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Button } from '../ui/Button';
 import { Room } from '../../types/room';
 import { useRouter } from 'next/navigation';
+import { useSubscription } from '@apollo/client';
+import { ROOM_CREATED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
 
 export const RoomList: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -19,6 +21,40 @@ export const RoomList: React.FC = () => {
   const { deleteRoom, loading: deleteLoading } = useDeleteRoom();
   const { user } = useAuthContext();
   const router = useRouter();
+
+  // Subscribe to new room creation
+  const { data: newRoomData, loading: subLoading, error: subError } = useSubscription(ROOM_CREATED_SUBSCRIPTION);
+
+  // Debug subscription
+  useEffect(() => {
+    console.log('Subscription state:', {
+      loading: subLoading,
+      error: subError,
+      data: newRoomData
+    });
+  }, [subLoading, subError, newRoomData]);
+
+  // Add new room to cache when subscription receives data
+  useEffect(() => {
+    if (newRoomData?.roomCreated) {
+      console.log('New room created via subscription:', newRoomData.roomCreated);
+
+      // Check if this room is not created by current user (to avoid duplicate)
+      if (newRoomData.roomCreated.creatorId !== user?.id) {
+        refetch(); // Only refetch if it's from another user
+      }
+    }
+  }, [newRoomData, refetch, user?.id]);
+
+  // Temporary: Auto-refetch every 10 seconds to ensure real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('Auto-refetching rooms...');
+      refetch();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const handleJoinRoom = async (roomId: string) => {
     try {
@@ -100,9 +136,14 @@ export const RoomList: React.FC = () => {
 
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Danh sách phòng</h2>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          Tạo phòng mới
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="secondary" onClick={() => refetch()}>
+            🔄 Refresh
+          </Button>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            Tạo phòng mới
+          </Button>
+        </div>
       </div>
 
       {rooms.length === 0 ? (
@@ -112,11 +153,6 @@ export const RoomList: React.FC = () => {
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">Chưa có phòng nào</h3>
           <p className="mt-1 text-sm text-gray-500">Bắt đầu bằng cách tạo phòng mới.</p>
-          <div className="mt-6">
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              Tạo phòng đầu tiên
-            </Button>
-          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

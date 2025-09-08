@@ -2,11 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { useWebRTC } from '../../hooks/useWebRTC';
 import { useRoom } from '../../hooks/useGraphQL';
+import { useAuthContext } from '../../providers/AuthProvider';
 import { VideoGrid } from './VideoGrid';
 import { ControlBar } from './ControlBar';
 import { ChatSidebar } from './ChatSidebar';
 import { ParticipantsList } from './ParticipantsList';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Button } from '../ui/Button';
+import { useRouter } from 'next/navigation';
 
 interface VideoCallRoomProps {
   roomId: string;
@@ -15,7 +18,9 @@ interface VideoCallRoomProps {
 export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
-  
+
+  const router = useRouter();
+  const { user } = useAuthContext();
   const { room, loading: roomLoading } = useRoom(roomId);
   const {
     localStream,
@@ -53,7 +58,10 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Phòng không tồn tại</h2>
-          <p className="text-gray-600">Phòng bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+          <p className="text-gray-600 mb-4">Phòng bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+          <Button onClick={() => router.push('/dashboard')}>
+            Quay về Dashboard
+          </Button>
         </div>
       </div>
     );
@@ -107,6 +115,8 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
             onToggleAudio={toggleAudio}
             onShareScreen={shareScreen}
             onEndCall={endCall}
+            roomId={roomId}
+            isRoomOwner={room?.creatorId === user?.id}
           />
         </div>
 
