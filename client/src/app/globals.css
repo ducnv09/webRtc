@@ -92,12 +92,31 @@ video {
   flex-shrink: 0;
 }
 
-/* Video tile responsive sizing */
+/* Video tile styling - đồng nhất kích thước */
 .video-tile {
-  min-height: 0;
-  max-height: 100%;
+  position: relative;
+  background: #1f2937;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 16/9; /* Cố định tỷ lệ 16:9 cho TẤT CẢ video */
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Video element trong tile */
+.video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Crop để fit khung hình 16:9 */
+  background-color: #000;
+}
+
+/* Local video - mirror effect */
+.video-tile.local video {
+  transform: scaleX(-1);
 }
 
 /* Grid responsive adjustments */
@@ -114,34 +133,87 @@ video {
   height: 100%;
 }
 
-/* Ensure aspect ratio is maintained but doesn't overflow */
-.video-tile.aspect-video {
-  aspect-ratio: 16 / 9;
-  max-height: calc(100vh - 200px); /* Reserve space for header and control bar */
+/* User info overlay */
+.video-tile .user-info {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 2;
 }
 
-/* Screen share specific styling - full screen */
-.video-tile.screen-share-tile {
-  height: 100% !important;
-  width: 100% !important;
-  aspect-ratio: unset !important;
-  max-height: none !important;
-  min-height: unset !important;
-  max-width: none !important;
-  min-width: unset !important;
+/* Avatar placeholder khi không có video */
+.video-tile .avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: bold;
+  color: white;
 }
 
-/* Ensure screen share video takes full container */
-.screen-share-tile video {
-  background-color: #000;
-  object-fit: contain !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  max-height: none !important;
+/* Mute indicator */
+.video-tile .mute-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 2;
 }
 
-/* Override any conflicting aspect-ratio */
-.screen-share-tile.aspect-video {
-  aspect-ratio: unset !important;
+/* Focus layout - video chính */
+.video-focused-main .video-tile {
+  height: 100%;
+  aspect-ratio: 16/9;
+  max-height: none;
+}
+
+/* Focus layout - sidebar videos */
+.video-focused-sidebar .video-tile {
+  aspect-ratio: 16/9;
+  height: auto;
+  min-height: 120px;
+  max-height: 200px;
+}
+
+/* Video modal styling */
+.video-modal {
+  backdrop-filter: blur(4px);
+}
+
+/* Hover effects for clickable videos */
+.video-tile:hover {
+  /* transform: scale(1.02); */
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.video-tile:hover::after {
+  /* content: "Click to expand"; */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 10;
 }

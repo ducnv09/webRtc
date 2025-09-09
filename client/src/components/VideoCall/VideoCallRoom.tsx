@@ -24,7 +24,9 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
   const { room, loading: roomLoading } = useRoom(roomId);
   const {
     localStream,
+    screenShareStream,
     remoteStreams,
+    remoteScreenShares,
     isVideoEnabled,
     isAudioEnabled,
     isScreenSharing,
@@ -107,7 +109,9 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
           <div className="video-grid-container">
             <VideoGrid
               localStream={localStream}
+              screenShareStream={screenShareStream}
               remoteStreams={remoteStreams}
+              remoteScreenShares={remoteScreenShares}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
               isScreenSharing={isScreenSharing}

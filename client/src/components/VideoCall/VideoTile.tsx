@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 
 interface VideoTileProps {
-  stream: MediaStream;
+  stream: MediaStream | null;
   isLocal: boolean;
   isVideoEnabled: boolean;
   isAudioEnabled?: boolean;
