@@ -109,8 +109,26 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
               roomName={room.name}
               participantCount={isConnected && participantCount > 0 ? participantCount : room.members.length}
               isConnected={isConnected}
-              onToggleParticipants={() => setIsParticipantsOpen(!isParticipantsOpen)}
-              onToggleChat={() => setIsChatOpen(!isChatOpen)}
+              onToggleParticipants={() => {
+                if (isParticipantsOpen) {
+                  // Nếu đang mở participants thì đóng
+                  setIsParticipantsOpen(false);
+                } else {
+                  // Nếu đang đóng participants thì mở và đóng chat
+                  setIsParticipantsOpen(true);
+                  setIsChatOpen(false);
+                }
+              }}
+              onToggleChat={() => {
+                if (isChatOpen) {
+                  // Nếu đang mở chat thì đóng
+                  setIsChatOpen(false);
+                } else {
+                  // Nếu đang đóng chat thì mở và đóng participants
+                  setIsChatOpen(true);
+                  setIsParticipantsOpen(false);
+                }
+              }}
             />
           </div>
         </div>
