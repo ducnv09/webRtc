@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from '@apollo/client';
+import { useMemo } from 'react';
 import { GET_ROOMS, GET_ROOM } from '../graphql/queries/rooms';
 import { GET_ROOM_MESSAGES } from '../graphql/queries/messages';
 import { CREATE_ROOM_MUTATION, JOIN_ROOM_MUTATION, LEAVE_ROOM_MUTATION, UPDATE_ROOM_MUTATION, DELETE_ROOM_MUTATION } from '../graphql/mutations/rooms';
@@ -34,9 +35,14 @@ export const useRoomMessages = (roomId: string, limit = 50, offset = 0) => {
     variables: { roomId, limit, offset },
     skip: !roomId,
   });
-  
+
+  // Sử dụng useMemo để tránh tạo mảng mới mỗi lần render
+  const messages = useMemo(() => {
+    return data?.roomMessages || [];
+  }, [data?.roomMessages]);
+
   return {
-    messages: data?.roomMessages || [],
+    messages,
     loading,
     error,
     fetchMore,

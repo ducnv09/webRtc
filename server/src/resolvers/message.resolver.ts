@@ -31,11 +31,11 @@ export class MessageResolver {
   @UseGuards(JwtAuthGuard)
   async roomMessages(
     @Args('roomId') roomId: string,
-    @Args('limit', { defaultValue: 50 }) limit: number,
-    @Args('offset', { defaultValue: 0 }) offset: number,
+    @Args('limit', { defaultValue: 50, type: () => Number }) limit: number,
+    @Args('offset', { defaultValue: 0, type: () => Number }) offset: number,
     @CurrentUser() user: any,
   ): Promise<Message[]> {
-    return this.messageService.getRoomMessages(roomId, user.id, limit, offset);
+    return this.messageService.getRoomMessages(roomId, user.id, Math.floor(limit), Math.floor(offset));
   }
 
   @Mutation(() => Boolean)

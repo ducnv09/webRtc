@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRoomMessages, useSendMessage } from '../../hooks/useGraphQL';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuthContext } from '../../providers/AuthProvider';
@@ -22,11 +22,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
   const { messages: initialMessages, loading } = useRoomMessages(roomId);
   const { sendMessage } = useSendMessage();
 
-  useEffect(() => {
-    if (initialMessages) {
-      setMessages(initialMessages.slice().reverse());
-    }
+  // Sử dụng useMemo để tránh tạo mảng mới không cần thiết
+  const reversedInitialMessages = useMemo(() => {
+    if (!initialMessages || initialMessages.length === 0) return [];
+    return [...initialMessages].reverse();
   }, [initialMessages]);
+
+  useEffect(() => {
+    if (reversedInitialMessages.length > 0 && messages.length === 0) {
+      setMessages(reversedInitialMessages);
+    }
+  }, [reversedInitialMessages, messages.length]);
 
   useEffect(() => {
     if (socket) {

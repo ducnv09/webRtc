@@ -21,6 +21,7 @@ import { PrismaService } from './services/prisma.service';
         'subscriptions-transport-ws': true,
       },
       context: ({ req, res }) => ({ req, res }),
+      csrfPrevention: false, // Tắt CSRF protection cho development
     }),
     AuthModule,
     RoomModule,
