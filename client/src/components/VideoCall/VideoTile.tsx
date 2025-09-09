@@ -64,7 +64,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
       <div className="absolute bottom-3 left-3 right-3">
         <div className="flex items-end justify-between">
           <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded">
-            {username}
+            {username}{isLocal && ' (Bạn)'}
           </span>
           <div className="flex items-center space-x-1">
             {!isAudioEnabled && (
