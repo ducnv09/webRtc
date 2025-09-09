@@ -74,35 +74,7 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
 
   return (
     <div className="video-call-container bg-gray-900">
-      {/* Header */}
-      <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-white text-lg font-semibold">{room.name}</h1>
-          <p className="text-gray-400 text-sm">
-            {isConnected && participantCount > 0 ? participantCount : room.members.length} thành viên
-          </p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setIsParticipantsOpen(!isParticipantsOpen)}
-            className="text-gray-400 hover:text-white"
-          >
-            <img
-              src="/user-group.svg"
-              alt="Participants"
-              className="w-6 h-6 filter brightness-0 invert opacity-60 hover:opacity-100 transition-opacity"
-            />
-          </button>
-          <button
-            onClick={() => setIsChatOpen(!isChatOpen)}
-            className="text-gray-400 hover:text-white"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </button>
-        </div>
-      </div>
+
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -134,6 +106,11 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
               onEndCall={endCall}
               roomId={roomId}
               isRoomOwner={room?.creatorId === user?.id}
+              roomName={room.name}
+              participantCount={isConnected && participantCount > 0 ? participantCount : room.members.length}
+              isConnected={isConnected}
+              onToggleParticipants={() => setIsParticipantsOpen(!isParticipantsOpen)}
+              onToggleChat={() => setIsChatOpen(!isChatOpen)}
             />
           </div>
         </div>
