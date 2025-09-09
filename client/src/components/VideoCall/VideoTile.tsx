@@ -4,6 +4,7 @@ interface VideoTileProps {
   stream: MediaStream;
   isLocal: boolean;
   isVideoEnabled: boolean;
+  isAudioEnabled?: boolean;
   username: string;
   avatar?: string | null;
 }
@@ -12,23 +13,41 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   stream,
   isLocal,
   isVideoEnabled,
+  isAudioEnabled: propIsAudioEnabled,
   username,
   avatar,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [detectedAudioEnabled, setDetectedAudioEnabled] = useState(true);
+
+  // Sử dụng prop nếu có, nếu không thì dùng detected state
+  const currentAudioEnabled = propIsAudioEnabled !== undefined ? propIsAudioEnabled : detectedAudioEnabled;
 
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
-      
-      // Check audio track status
+    }
+
+    // Chỉ detect audio cho remote streams (không có prop isAudioEnabled)
+    if (propIsAudioEnabled === undefined && stream) {
       const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
-        setIsAudioEnabled(audioTrack.enabled);
+        setDetectedAudioEnabled(audioTrack.enabled);
+
+        // Listen for track enabled/disabled changes
+        const handleTrackChange = () => {
+          setDetectedAudioEnabled(audioTrack.enabled);
+        };
+
+        // Polling để check audio track status (vì không có event cho enabled change)
+        const interval = setInterval(handleTrackChange, 100);
+
+        return () => {
+          clearInterval(interval);
+        };
       }
     }
-  }, [stream]);
+  }, [stream, propIsAudioEnabled]);
 
   return (
     <div className="video-tile relative bg-gray-800 rounded-lg overflow-hidden aspect-video min-h-0">
@@ -67,7 +86,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
             {username}{isLocal && ' (Bạn)'}
           </span>
           <div className="flex items-center space-x-1">
-            {!isAudioEnabled && (
+            {!currentAudioEnabled && (
               <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
                 <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />

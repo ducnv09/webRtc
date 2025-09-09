@@ -11,6 +11,7 @@ interface VideoGridProps {
   localStream: MediaStream | null;
   remoteStreams: Map<string, MediaStream>;
   isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
   currentUser: User | null;
   participants: Participant[];
   roomMembers: any[];
@@ -20,6 +21,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   localStream,
   remoteStreams,
   isVideoEnabled,
+  isAudioEnabled,
   currentUser,
   participants,
   roomMembers,
@@ -50,6 +52,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             stream={localStream}
             isLocal={true}
             isVideoEnabled={isVideoEnabled}
+            isAudioEnabled={isAudioEnabled}
             username={currentUser.username}
             avatar={currentUser.avatar}
           />
