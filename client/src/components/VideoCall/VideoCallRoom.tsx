@@ -71,7 +71,7 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900">
+    <div className="video-call-container bg-gray-900">
       {/* Header */}
       <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
         <div>
@@ -107,29 +107,33 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Video Area */}
-        <div className="flex-1 flex flex-col">
-          <VideoGrid
-            localStream={localStream}
-            remoteStreams={remoteStreams}
-            isVideoEnabled={isVideoEnabled}
-            currentUser={user}
-            participants={participants}
-            roomMembers={room?.members || []}
-          />
-          
-          <ControlBar
-            isVideoEnabled={isVideoEnabled}
-            isAudioEnabled={isAudioEnabled}
-            isScreenSharing={isScreenSharing}
-            onToggleVideo={toggleVideo}
-            onToggleAudio={toggleAudio}
-            onShareScreen={shareScreen}
-            onEndCall={endCall}
-            roomId={roomId}
-            isRoomOwner={room?.creatorId === user?.id}
-          />
+        <div className="video-area">
+          <div className="video-grid-container">
+            <VideoGrid
+              localStream={localStream}
+              remoteStreams={remoteStreams}
+              isVideoEnabled={isVideoEnabled}
+              currentUser={user}
+              participants={participants}
+              roomMembers={room?.members || []}
+            />
+          </div>
+
+          <div className="control-bar">
+            <ControlBar
+              isVideoEnabled={isVideoEnabled}
+              isAudioEnabled={isAudioEnabled}
+              isScreenSharing={isScreenSharing}
+              onToggleVideo={toggleVideo}
+              onToggleAudio={toggleAudio}
+              onShareScreen={shareScreen}
+              onEndCall={endCall}
+              roomId={roomId}
+              isRoomOwner={room?.creatorId === user?.id}
+            />
+          </div>
         </div>
 
         {/* Sidebar */}

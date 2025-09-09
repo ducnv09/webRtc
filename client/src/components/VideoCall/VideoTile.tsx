@@ -31,7 +31,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   }, [stream]);
 
   return (
-    <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+    <div className="video-tile relative bg-gray-800 rounded-lg overflow-hidden aspect-video min-h-0">
       {isVideoEnabled ? (
         <video
           ref={videoRef}
