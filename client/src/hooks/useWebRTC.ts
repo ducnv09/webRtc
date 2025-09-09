@@ -20,10 +20,7 @@ export const useWebRTC = (roomId: string) => {
   const { socket } = useSocket('video');
   const { participants, participantCount, isConnected } = useVideoParticipants(socket, roomId);
 
-  // Debug: Log khi localStream thay đổi
-  useEffect(() => {
-    console.log('localStream changed:', localStream);
-  }, [localStream]);
+
 
   const configuration: RTCConfiguration = {
     iceServers: [

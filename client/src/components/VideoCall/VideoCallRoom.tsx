@@ -110,6 +110,7 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
               remoteStreams={remoteStreams}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
+              isScreenSharing={isScreenSharing}
               currentUser={user}
               participants={participants}
               roomMembers={room?.members || []}

@@ -119,3 +119,29 @@ video {
   aspect-ratio: 16 / 9;
   max-height: calc(100vh - 200px); /* Reserve space for header and control bar */
 }
+
+/* Screen share specific styling - full screen */
+.video-tile.screen-share-tile {
+  height: 100% !important;
+  width: 100% !important;
+  aspect-ratio: unset !important;
+  max-height: none !important;
+  min-height: unset !important;
+  max-width: none !important;
+  min-width: unset !important;
+}
+
+/* Ensure screen share video takes full container */
+.screen-share-tile video {
+  background-color: #000;
+  object-fit: contain !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Override any conflicting aspect-ratio */
+.screen-share-tile.aspect-video {
+  aspect-ratio: unset !important;
+}

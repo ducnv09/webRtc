@@ -7,6 +7,7 @@ interface VideoTileProps {
   isAudioEnabled?: boolean;
   username: string;
   avatar?: string | null;
+  isScreenShare?: boolean;
 }
 
 const VideoTileComponent: React.FC<VideoTileProps> = ({
@@ -16,6 +17,7 @@ const VideoTileComponent: React.FC<VideoTileProps> = ({
   isAudioEnabled: propIsAudioEnabled,
   username,
   avatar,
+  isScreenShare = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [detectedAudioEnabled, setDetectedAudioEnabled] = useState(true);
@@ -58,14 +60,32 @@ const VideoTileComponent: React.FC<VideoTileProps> = ({
   }, [stream, propIsAudioEnabled]);
 
   return (
-    <div className="video-tile relative bg-gray-800 rounded-lg overflow-hidden aspect-video min-h-0">
+    <div
+      className={`video-tile relative bg-gray-800 rounded-lg overflow-hidden ${
+        isScreenShare ? 'screen-share-tile' : 'aspect-video min-h-0'
+      }`}
+      style={isScreenShare ? {
+        height: '100%',
+        width: '100%',
+        aspectRatio: 'unset',
+        minHeight: 'unset',
+        maxHeight: 'none'
+      } : {}}
+    >
       {isVideoEnabled ? (
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted={isLocal}
-          className="w-full h-full object-cover"
+          className={`w-full h-full ${
+            isScreenShare ? 'object-contain bg-black' : 'object-cover'
+          }`}
+          style={isScreenShare ? {
+            objectFit: 'contain',
+            width: '100%',
+            height: '100%'
+          } : {}}
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-500 to-gray-700">
@@ -126,6 +146,7 @@ export const VideoTile = React.memo(VideoTileComponent, (prevProps, nextProps) =
     prevProps.isAudioEnabled === nextProps.isAudioEnabled &&
     prevProps.username === nextProps.username &&
     prevProps.avatar === nextProps.avatar &&
-    prevProps.isLocal === nextProps.isLocal
+    prevProps.isLocal === nextProps.isLocal &&
+    prevProps.isScreenShare === nextProps.isScreenShare
   );
 });

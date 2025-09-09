@@ -12,6 +12,7 @@ interface VideoGridProps {
   remoteStreams: Map<string, MediaStream>;
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
+  isScreenSharing: boolean;
   currentUser: User | null;
   participants: Participant[];
   roomMembers: any[];
@@ -22,6 +23,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   remoteStreams,
   isVideoEnabled,
   isAudioEnabled,
+  isScreenSharing,
   currentUser,
   participants,
   roomMembers,
@@ -29,6 +31,11 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   const totalStreams = (localStream ? 1 : 0) + remoteStreams.size;
 
   const getGridClass = () => {
+    // Nếu đang screen share, sử dụng layout đặc biệt
+    if (isScreenSharing) {
+      return totalStreams > 1 ? 'grid-cols-4' : 'grid-cols-1';
+    }
+
     if (totalStreams <= 1) return 'grid-cols-1';
     if (totalStreams <= 4) return 'grid-cols-2';
     if (totalStreams <= 9) return 'grid-cols-3';
@@ -44,6 +51,53 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     return member ? member.user : null;
   };
 
+  if (isScreenSharing) {
+    // Layout đặc biệt cho screen sharing - full screen
+    return (
+      <div className="h-full w-full overflow-hidden">
+        <div className="flex h-full w-full">
+          {/* Screen share takes main area - full size */}
+          {localStream && currentUser && (
+            <div className="flex-1 h-full min-w-0">
+              <VideoTile
+                stream={localStream}
+                isLocal={true}
+                isVideoEnabled={isVideoEnabled}
+                isAudioEnabled={isAudioEnabled}
+                isScreenShare={true}
+                username={currentUser.username}
+                avatar={currentUser.avatar}
+              />
+            </div>
+          )}
+
+          {/* Remote streams in sidebar - only if there are remote streams */}
+          {remoteStreams.size > 0 && (
+            <div className="w-64 h-full flex flex-col gap-2 p-2 overflow-y-auto bg-gray-900">
+              {Array.from(remoteStreams.entries()).map(([peerId, stream]) => {
+                const participant = participants.find(p => p.peerId === peerId);
+                const userInfo = participant ? getUserInfo(participant.userId) : null;
+
+                return (
+                  <div key={peerId} className="aspect-video flex-shrink-0">
+                    <VideoTile
+                      stream={stream}
+                      isLocal={false}
+                      isVideoEnabled={true}
+                      username={userInfo ? userInfo.username : `User ${peerId.slice(0, 8)}`}
+                      avatar={userInfo ? userInfo.avatar : null}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Layout bình thường
   return (
     <div className="h-full p-4 overflow-hidden">
       <div className={`video-grid grid ${getGridClass()} gap-4 h-full`}>
@@ -53,6 +107,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             isLocal={true}
             isVideoEnabled={isVideoEnabled}
             isAudioEnabled={isAudioEnabled}
+            isScreenShare={false}
             username={currentUser.username}
             avatar={currentUser.avatar}
           />
