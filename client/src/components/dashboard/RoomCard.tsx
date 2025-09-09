@@ -72,9 +72,11 @@ export const RoomCard: React.FC<RoomCardProps> = ({
       <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
         <div className="flex items-center space-x-4">
           <span className="flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-            </svg>
+            <img
+              src="/user-group.svg"
+              alt="Participants"
+              className="w-4 h-4 mr-1 opacity-60"
+            />
             {room.members.length}/{room.maxMembers}
           </span>
           <span className="flex items-center">
