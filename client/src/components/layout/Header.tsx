@@ -62,7 +62,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                       {user.email}
                     </span>
                   </div>
-                  <div className={`w-2 h-2 rounded-full ${user.isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
                 </div>
                 <Button
                   variant="ghost"

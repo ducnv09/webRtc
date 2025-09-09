@@ -32,11 +32,6 @@ export const ParticipantsList: React.FC<ParticipantsListProps> = ({
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <h3 className="text-lg font-semibold">
           Thành viên ({displayCount})
-          {participantCount !== undefined && (
-            <span className="ml-2 text-sm text-green-600">
-              ({onlineParticipants.length} đang online)
-            </span>
-          )}
         </h3>
         <button
           onClick={onClose}
@@ -74,14 +69,7 @@ export const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 <p className="text-sm font-medium text-gray-900">
                   {member.user.username}
                 </p>
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    onlineUserIds.has(member.user.id) ? 'bg-green-500' : 'bg-gray-400'
-                  }`} />
-                  <p className="text-xs text-gray-500">
-                    {onlineUserIds.has(member.user.id) ? 'Đang trong cuộc gọi' : 'Ngoại tuyến'}
-                  </p>
-                </div>
+
               </div>
             </div>
           ))}

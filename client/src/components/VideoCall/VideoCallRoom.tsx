@@ -78,12 +78,6 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
           <h1 className="text-white text-lg font-semibold">{room.name}</h1>
           <p className="text-gray-400 text-sm">
             {isConnected && participantCount > 0 ? participantCount : room.members.length} thành viên
-            {isConnected && (
-              <span className="ml-2 inline-flex items-center">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                Trực tuyến
-              </span>
-            )}
           </p>
         </div>
         <div className="flex items-center space-x-4">
