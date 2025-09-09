@@ -108,6 +108,11 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   };
 
   const handleVideoClick = (videoData: any) => {
+    // Nếu chỉ có 1 video thì không cho phép focus
+    if (allStreams.length <= 1) {
+      return;
+    }
+
     if (focusedVideo && focusedVideo.id === videoData.id) {
       // Click vào video đang được focus → quay về layout grid
       setFocusedVideo(null);
@@ -136,7 +141,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
           {/* Video được focus - chiếm phần lớn màn hình */}
           <div className="flex-1 h-full min-w-0 video-focused-main">
             <div
-              className="h-full cursor-pointer"
+              className={`h-full ${allStreams.length > 1 ? 'cursor-pointer' : 'cursor-default'}`}
               onClick={() => handleVideoClick(focusedVideo)}
             >
               <VideoTile
@@ -157,7 +162,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
               {otherStreams.map((videoData) => (
                 <div
                   key={videoData.id}
-                  className="aspect-video flex-shrink-0 cursor-pointer"
+                  className={`aspect-video flex-shrink-0 ${allStreams.length > 1 ? 'cursor-pointer' : 'cursor-default'}`}
                   onClick={() => handleVideoClick(videoData)}
                 >
                   <VideoTile
@@ -185,7 +190,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
         {allStreams.map((videoData) => (
           <div
             key={videoData.id}
-            className="cursor-pointer"
+            className={allStreams.length > 1 ? 'cursor-pointer' : 'cursor-default'}
             onClick={() => handleVideoClick(videoData)}
           >
             <VideoTile

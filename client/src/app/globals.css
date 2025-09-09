@@ -196,14 +196,13 @@ video {
   backdrop-filter: blur(4px);
 }
 
-/* Hover effects for clickable videos */
-.video-tile:hover {
+/* Hover effects for clickable videos - chỉ khi có nhiều hơn 1 video */
+.cursor-pointer .video-tile:hover {
   /* transform: scale(1.02); */
   transition: transform 0.2s ease;
-  cursor: pointer;
 }
 
-.video-tile:hover::after {
+.cursor-pointer .video-tile:hover::after {
   /* content: "Click to expand"; */
   position: absolute;
   top: 50%;
