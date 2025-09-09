@@ -61,9 +61,9 @@ export const VideoTile: React.FC<VideoTileProps> = ({
       )}
       
       {/* Username overlay - ở góc trái dưới */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+      <div className="absolute bottom-3 left-3 right-3">
         <div className="flex items-end justify-between">
-          <span className="text-white text-sm font-medium bg-black/30 px-2 py-1 rounded">
+          <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded">
             {username}
           </span>
           <div className="flex items-center space-x-1">
