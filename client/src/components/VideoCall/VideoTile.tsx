@@ -9,7 +9,7 @@ interface VideoTileProps {
   avatar?: string | null;
 }
 
-export const VideoTile: React.FC<VideoTileProps> = ({
+const VideoTileComponent: React.FC<VideoTileProps> = ({
   stream,
   isLocal,
   isVideoEnabled,
@@ -25,9 +25,14 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 
   useEffect(() => {
     if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+      // Chỉ set srcObject nếu nó thực sự khác
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+      }
     }
+  }, [stream, isLocal]);
 
+  useEffect(() => {
     // Chỉ detect audio cho remote streams (không có prop isAudioEnabled)
     if (propIsAudioEnabled === undefined && stream) {
       const audioTrack = stream.getAudioTracks()[0];
@@ -47,6 +52,9 @@ export const VideoTile: React.FC<VideoTileProps> = ({
         };
       }
     }
+
+    // Return empty cleanup function if no cleanup needed
+    return () => {};
   }, [stream, propIsAudioEnabled]);
 
   return (
@@ -108,3 +116,16 @@ export const VideoTile: React.FC<VideoTileProps> = ({
     </div>
   );
 };
+
+// Memoize component để tránh re-render không cần thiết
+export const VideoTile = React.memo(VideoTileComponent, (prevProps, nextProps) => {
+  // Chỉ re-render khi các props quan trọng thay đổi
+  return (
+    prevProps.stream === nextProps.stream &&
+    prevProps.isVideoEnabled === nextProps.isVideoEnabled &&
+    prevProps.isAudioEnabled === nextProps.isAudioEnabled &&
+    prevProps.username === nextProps.username &&
+    prevProps.avatar === nextProps.avatar &&
+    prevProps.isLocal === nextProps.isLocal
+  );
+});

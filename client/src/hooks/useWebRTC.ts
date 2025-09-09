@@ -16,8 +16,14 @@ export const useWebRTC = (roomId: string) => {
   const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
 
   const peerConnections = useRef<Map<string, PeerConnection>>(new Map());
+  const localStreamRef = useRef<MediaStream | null>(null);
   const { socket } = useSocket('video');
   const { participants, participantCount, isConnected } = useVideoParticipants(socket, roomId);
+
+  // Debug: Log khi localStream thay đổi
+  useEffect(() => {
+    console.log('localStream changed:', localStream);
+  }, [localStream]);
 
   const configuration: RTCConfiguration = {
     iceServers: [
@@ -44,9 +50,11 @@ export const useWebRTC = (roomId: string) => {
       setRemoteStreams(prev => new Map(prev.set(userId, remoteStream)));
     };
 
-    if (localStream) {
-      localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream);
+    // Lấy localStream từ ref để tránh re-create function
+    const currentLocalStream = localStreamRef.current;
+    if (currentLocalStream) {
+      currentLocalStream.getTracks().forEach(track => {
+        pc.addTrack(track, currentLocalStream);
       });
     }
 
@@ -54,7 +62,7 @@ export const useWebRTC = (roomId: string) => {
     peerConnections.current.set(userId, peerConnection);
 
     return pc;
-  }, [socket, roomId, localStream]);
+  }, [socket, roomId]); // Bỏ localStream khỏi dependency
 
   const startCall = useCallback(async () => {
     try {
@@ -79,15 +87,26 @@ export const useWebRTC = (roomId: string) => {
       // Try to get media stream
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: isVideoEnabled,
-          audio: isAudioEnabled,
+          video: true, // Luôn yêu cầu video
+          audio: true, // Luôn yêu cầu audio
         });
+
+        // Thiết lập trạng thái ban đầu cho tracks
+        const videoTrack = stream.getVideoTracks()[0];
+        const audioTrack = stream.getAudioTracks()[0];
+
+        if (videoTrack) {
+          videoTrack.enabled = isVideoEnabled;
+        }
+        if (audioTrack) {
+          audioTrack.enabled = isAudioEnabled;
+        }
+
         setLocalStream(stream);
+        localStreamRef.current = stream;
         console.log('Media stream obtained successfully');
 
         // Đồng bộ trạng thái với tracks thực tế
-        const videoTrack = stream.getVideoTracks()[0];
-        const audioTrack = stream.getAudioTracks()[0];
         if (videoTrack) setIsVideoEnabled(videoTrack.enabled);
         if (audioTrack) setIsAudioEnabled(audioTrack.enabled);
       } catch (mediaError) {
@@ -97,7 +116,7 @@ export const useWebRTC = (roomId: string) => {
     } catch (error) {
       console.error('Error in startCall:', error);
     }
-  }, [socket, roomId, hasJoinedRoom]);
+  }, [socket, roomId, hasJoinedRoom, isVideoEnabled, isAudioEnabled]);
 
   const toggleVideo = useCallback(async () => {
     if (!localStream) return;
@@ -106,27 +125,26 @@ export const useWebRTC = (roomId: string) => {
     if (!videoTrack) return;
 
     if (videoTrack.enabled) {
-      // Tắt video
+      // Tắt video - chỉ disable track
       videoTrack.enabled = false;
       setIsVideoEnabled(false);
     } else {
-      // Bật video lại - cần tạo track mới
+      // Bật video lại - cần tạo track mới vì track cũ có thể đã bị dừng
       try {
-        const newStream = await navigator.mediaDevices.getUserMedia({
+        const newVideoStream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: isAudioEnabled,
+          audio: false, // Không lấy audio mới
         });
 
-        // Thay thế video track cũ bằng track mới
-        const newVideoTrack = newStream.getVideoTracks()[0];
-        const audioTrack = localStream.getAudioTracks()[0];
+        const newVideoTrack = newVideoStream.getVideoTracks()[0];
+        const currentAudioTrack = localStream.getAudioTracks()[0];
 
         // Tạo stream mới với video track mới và audio track cũ
         const updatedStream = new MediaStream();
         if (newVideoTrack) updatedStream.addTrack(newVideoTrack);
-        if (audioTrack) updatedStream.addTrack(audioTrack);
+        if (currentAudioTrack) updatedStream.addTrack(currentAudioTrack);
 
-        // Cập nhật tất cả peer connections
+        // Cập nhật peer connections với video track mới
         peerConnections.current.forEach(({ pc }) => {
           const sender = pc.getSenders().find(s => s.track?.kind === 'video');
           if (sender && newVideoTrack) {
@@ -134,18 +152,19 @@ export const useWebRTC = (roomId: string) => {
           }
         });
 
-        // Dừng track cũ và cập nhật stream
+        // Dừng video track cũ và cập nhật stream
         videoTrack.stop();
         setLocalStream(updatedStream);
+        localStreamRef.current = updatedStream;
         setIsVideoEnabled(true);
       } catch (error) {
         console.error('Error enabling video:', error);
-        // Fallback: chỉ enable track cũ
+        // Fallback: thử enable track cũ
         videoTrack.enabled = true;
         setIsVideoEnabled(true);
       }
     }
-  }, [localStream, isAudioEnabled, peerConnections]);
+  }, [localStream, peerConnections]);
 
   const toggleAudio = useCallback(() => {
     if (localStream) {
@@ -161,55 +180,86 @@ export const useWebRTC = (roomId: string) => {
     try {
       if (isScreenSharing) {
         // Stop screen sharing - return to camera
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const cameraStream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: true,
+          audio: false, // Không lấy audio mới
         });
+
+        // Tạo stream mới với camera video và audio hiện tại
+        const newStream = new MediaStream();
+        const newVideoTrack = cameraStream.getVideoTracks()[0];
+        const currentAudioTrack = localStream?.getAudioTracks()[0];
+
+        if (newVideoTrack) newStream.addTrack(newVideoTrack);
+        if (currentAudioTrack) newStream.addTrack(currentAudioTrack);
 
         // Update local stream
-        setLocalStream(stream);
+        setLocalStream(newStream);
+        localStreamRef.current = newStream;
         setIsScreenSharing(false);
 
-        // Update all peer connections with new stream
+        // Update all peer connections with new video track
         peerConnections.current.forEach(({ pc }) => {
           const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-          if (sender && stream.getVideoTracks()[0]) {
-            sender.replaceTrack(stream.getVideoTracks()[0]);
+          if (sender && newVideoTrack) {
+            sender.replaceTrack(newVideoTrack);
           }
         });
+
+        // Dừng screen track cũ
+        if (localStream) {
+          localStream.getVideoTracks().forEach(track => track.stop());
+        }
       } else {
         // Start screen sharing
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: true,
+          audio: false, // Không lấy audio từ screen
         });
 
+        // Tạo stream mới với screen video và audio hiện tại
+        const newStream = new MediaStream();
+        const screenVideoTrack = screenStream.getVideoTracks()[0];
+        const currentAudioTrack = localStream?.getAudioTracks()[0];
+
+        if (screenVideoTrack) newStream.addTrack(screenVideoTrack);
+        if (currentAudioTrack) newStream.addTrack(currentAudioTrack);
+
         // Update local stream
-        setLocalStream(screenStream);
+        setLocalStream(newStream);
+        localStreamRef.current = newStream;
         setIsScreenSharing(true);
 
-        // Update all peer connections with screen stream
+        // Update all peer connections with screen video track
         peerConnections.current.forEach(({ pc }) => {
           const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-          if (sender && screenStream.getVideoTracks()[0]) {
-            sender.replaceTrack(screenStream.getVideoTracks()[0]);
+          if (sender && screenVideoTrack) {
+            sender.replaceTrack(screenVideoTrack);
           }
         });
 
         // Handle screen share end
-        screenStream.getVideoTracks()[0].onended = () => {
+        screenVideoTrack.onended = () => {
           setIsScreenSharing(false);
           // Return to camera when screen sharing ends
           navigator.mediaDevices.getUserMedia({
             video: true,
-            audio: true,
-          }).then(stream => {
-            setLocalStream(stream);
+            audio: false,
+          }).then(cameraStream => {
+            const returnStream = new MediaStream();
+            const cameraVideoTrack = cameraStream.getVideoTracks()[0];
+            const currentAudio = newStream.getAudioTracks()[0];
+
+            if (cameraVideoTrack) returnStream.addTrack(cameraVideoTrack);
+            if (currentAudio) returnStream.addTrack(currentAudio);
+
+            setLocalStream(returnStream);
+            localStreamRef.current = returnStream;
             // Update peer connections
             peerConnections.current.forEach(({ pc }) => {
               const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-              if (sender && stream.getVideoTracks()[0]) {
-                sender.replaceTrack(stream.getVideoTracks()[0]);
+              if (sender && cameraVideoTrack) {
+                sender.replaceTrack(cameraVideoTrack);
               }
             });
           });
@@ -218,12 +268,13 @@ export const useWebRTC = (roomId: string) => {
     } catch (error) {
       console.error('Error sharing screen:', error);
     }
-  }, [isScreenSharing]);
+  }, [isScreenSharing, localStream]);
 
   const endCall = useCallback(() => {
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
       setLocalStream(null);
+      localStreamRef.current = null;
     }
 
     peerConnections.current.forEach(({ pc }) => {
