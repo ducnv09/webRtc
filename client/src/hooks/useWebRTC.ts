@@ -79,11 +79,17 @@ export const useWebRTC = (roomId: string) => {
       // Try to get media stream
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
+          video: isVideoEnabled,
+          audio: isAudioEnabled,
         });
         setLocalStream(stream);
         console.log('Media stream obtained successfully');
+
+        // Đồng bộ trạng thái với tracks thực tế
+        const videoTrack = stream.getVideoTracks()[0];
+        const audioTrack = stream.getAudioTracks()[0];
+        if (videoTrack) setIsVideoEnabled(videoTrack.enabled);
+        if (audioTrack) setIsAudioEnabled(audioTrack.enabled);
       } catch (mediaError) {
         console.error('Error accessing media devices:', mediaError);
         // Continue without media stream - user can still see others
@@ -93,15 +99,53 @@ export const useWebRTC = (roomId: string) => {
     }
   }, [socket, roomId, hasJoinedRoom]);
 
-  const toggleVideo = useCallback(() => {
-    if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoEnabled(videoTrack.enabled);
+  const toggleVideo = useCallback(async () => {
+    if (!localStream) return;
+
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    if (videoTrack.enabled) {
+      // Tắt video
+      videoTrack.enabled = false;
+      setIsVideoEnabled(false);
+    } else {
+      // Bật video lại - cần tạo track mới
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: isAudioEnabled,
+        });
+
+        // Thay thế video track cũ bằng track mới
+        const newVideoTrack = newStream.getVideoTracks()[0];
+        const audioTrack = localStream.getAudioTracks()[0];
+
+        // Tạo stream mới với video track mới và audio track cũ
+        const updatedStream = new MediaStream();
+        if (newVideoTrack) updatedStream.addTrack(newVideoTrack);
+        if (audioTrack) updatedStream.addTrack(audioTrack);
+
+        // Cập nhật tất cả peer connections
+        peerConnections.current.forEach(({ pc }) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (sender && newVideoTrack) {
+            sender.replaceTrack(newVideoTrack);
+          }
+        });
+
+        // Dừng track cũ và cập nhật stream
+        videoTrack.stop();
+        setLocalStream(updatedStream);
+        setIsVideoEnabled(true);
+      } catch (error) {
+        console.error('Error enabling video:', error);
+        // Fallback: chỉ enable track cũ
+        videoTrack.enabled = true;
+        setIsVideoEnabled(true);
       }
     }
-  }, [localStream]);
+  }, [localStream, isAudioEnabled, peerConnections]);
 
   const toggleAudio = useCallback(() => {
     if (localStream) {
