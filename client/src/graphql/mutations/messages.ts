@@ -6,6 +6,7 @@ export const SEND_MESSAGE_MUTATION = gql`
       id
       content
       type
+      userId
       createdAt
       user {
         id

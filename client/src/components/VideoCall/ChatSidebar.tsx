@@ -16,10 +16,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const { user } = useAuthContext();
   const { socket } = useSocket('chat');
-  const { messages: initialMessages, loading } = useRoomMessages(roomId);
+  const { messages: initialMessages, loading, refetch } = useRoomMessages(roomId);
   const { sendMessage } = useSendMessage();
 
   // Sử dụng useMemo để tránh tạo mảng mới không cần thiết
@@ -28,22 +28,67 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
     return [...initialMessages].reverse();
   }, [initialMessages]);
 
+  // Reset messages when roomId changes
   useEffect(() => {
-    if (reversedInitialMessages.length > 0 && messages.length === 0) {
-      setMessages(reversedInitialMessages);
+    setMessages([]);
+  }, [roomId]);
+
+  // Sync messages with initial messages from GraphQL
+  useEffect(() => {
+    if (reversedInitialMessages.length > 0) {
+      console.log('Syncing messages:', {
+        serverMessages: reversedInitialMessages.length,
+        localMessages: messages.length
+      });
+
+      setMessages(prevMessages => {
+        // Nếu chưa có tin nhắn nào, load từ server
+        if (prevMessages.length === 0) {
+          console.log('Loading initial messages from server');
+          return reversedInitialMessages;
+        }
+
+        // Merge tin nhắn từ server với tin nhắn local, tránh duplicate
+        const mergedMessages = [...reversedInitialMessages];
+
+        // Thêm các tin nhắn local mà chưa có trong server data
+        prevMessages.forEach(localMsg => {
+          const existsInServer = reversedInitialMessages.some(serverMsg => serverMsg.id === localMsg.id);
+          if (!existsInServer) {
+            mergedMessages.push(localMsg);
+          }
+        });
+
+        // Sort theo thời gian tạo
+        const sortedMessages = mergedMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        console.log('Merged messages:', sortedMessages.length);
+        return sortedMessages;
+      });
     }
-  }, [reversedInitialMessages, messages.length]);
+  }, [reversedInitialMessages]);
 
   useEffect(() => {
     if (socket) {
       socket.emit('join-chat-room', { roomId });
 
-      socket.on('new-message', (message: Message) => {
-        setMessages(prev => [...prev, message]);
+      socket.on('new-chat-message', (message: Message) => {
+        setMessages(prev => {
+          // Kiểm tra xem tin nhắn đã tồn tại chưa để tránh duplicate
+          const exists = prev.some(msg => msg.id === message.id);
+          if (exists) {
+            return prev;
+          }
+          return [...prev, message];
+        });
+      });
+
+      socket.on('joined-chat-room', (data) => {
+        console.log('Successfully joined chat room:', data);
       });
 
       return () => {
-        socket.off('new-message');
+        socket.off('new-chat-message');
+        socket.off('joined-chat-room');
       };
     }
 
@@ -59,7 +104,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
     if (!newMessage.trim()) return;
 
     try {
-      await sendMessage({
+      const result = await sendMessage({
         variables: {
           input: {
             content: newMessage.trim(),
@@ -68,7 +113,32 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
           },
         },
       });
+
+      // Thêm tin nhắn vào state ngay lập tức để cập nhật UI
+      if (result.data?.sendMessage) {
+        setMessages(prev => {
+          // Kiểm tra xem tin nhắn đã tồn tại chưa để tránh duplicate
+          const exists = prev.some(msg => msg.id === result.data.sendMessage.id);
+          if (exists) {
+            console.log('Message already exists, skipping add to state');
+            return prev;
+          }
+          console.log('Adding new message to state:', result.data.sendMessage.id);
+          return [...prev, result.data.sendMessage];
+        });
+      }
+
       setNewMessage('');
+
+      // Refetch messages để đảm bảo sync với server
+      setTimeout(() => {
+        refetch();
+      }, 500);
+
+      // Scroll to bottom after sending message
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -93,33 +163,39 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {loading ? (
           <div className="text-center text-gray-500">Đang tải tin nhắn...</div>
+        ) : !user ? (
+          <div className="text-center text-gray-500">Đang tải thông tin người dùng...</div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.userId === user?.id ? 'justify-end' : 'justify-start'}`}
-            >
+          messages.map((message) => {
+            const isCurrentUser = message.userId === user?.id;
+
+            return (
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  message.userId === user?.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-900'
-                }`}
+                key={message.id}
+                className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
               >
-                {message.userId !== user?.id && (
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    isCurrentUser
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-900'
+                  }`}
+                >
+                {!isCurrentUser && (
                   <p className="text-xs font-medium mb-1 opacity-75">
                     {message.user.username}
                   </p>
                 )}
                 <p className="text-sm">{message.content}</p>
                 <p className={`text-xs mt-1 ${
-                  message.userId === user?.id ? 'text-blue-100' : 'text-gray-500'
+                  isCurrentUser ? 'text-blue-100' : 'text-gray-500'
                 }`}>
                   {formatTime(message.createdAt)}
                 </p>
               </div>
             </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

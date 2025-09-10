@@ -7,6 +7,6 @@ import { MessageModule } from './message.module';
 
 @Module({
   imports: [AuthModule, RoomModule, MessageModule],
-  providers: [VideoCallGateway, ChatGateway],
+  providers: [VideoCallGateway],
 })
 export class WebSocketModule {}

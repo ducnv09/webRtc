@@ -4,12 +4,14 @@ import {
   SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   ConnectedSocket,
   MessageBody
 } from '@nestjs/websockets';
 import { UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { MessageService } from '../services/message.service';
+import { SocketEventService } from '../services/socket-event.service';
 import { WsJwtGuard } from '../common/guards/ws-jwt.guard';
 import { MessageType } from '../graphql/types/message.type';
 
@@ -20,11 +22,18 @@ import { MessageType } from '../graphql/types/message.type';
     credentials: true,
   },
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
   @WebSocketServer()
   server: Server;
 
-  constructor(private messageService: MessageService) {}
+  constructor(
+    private messageService: MessageService,
+    private socketEventService: SocketEventService,
+  ) {}
+
+  afterInit(server: Server) {
+    this.socketEventService.setChatServer(server);
+  }
 
   async handleConnection(client: Socket) {
     console.log(`Chat client connected: ${client.id}`);

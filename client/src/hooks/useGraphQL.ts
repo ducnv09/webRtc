@@ -31,9 +31,11 @@ export const useRoom = (roomId: string) => {
 };
 
 export const useRoomMessages = (roomId: string, limit = 50, offset = 0) => {
-  const { data, loading, error, fetchMore } = useQuery(GET_ROOM_MESSAGES, {
+  const { data, loading, error, fetchMore, refetch } = useQuery(GET_ROOM_MESSAGES, {
     variables: { roomId, limit, offset },
     skip: !roomId,
+    fetchPolicy: 'cache-and-network', // Luôn fetch từ network và update cache
+    notifyOnNetworkStatusChange: true,
   });
 
   // Sử dụng useMemo để tránh tạo mảng mới mỗi lần render
@@ -46,6 +48,7 @@ export const useRoomMessages = (roomId: string, limit = 50, offset = 0) => {
     loading,
     error,
     fetchMore,
+    refetch,
   };
 };
 

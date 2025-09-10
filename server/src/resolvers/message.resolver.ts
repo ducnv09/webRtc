@@ -2,6 +2,7 @@ import { Resolver, Mutation, Query, Args, Subscription } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 import { MessageService } from '../services/message.service';
+import { SocketEventService } from '../services/socket-event.service';
 import { CreateMessageInput } from '../graphql/inputs/message.input';
 import { Message } from '../graphql/types/message.type';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -12,7 +13,10 @@ const pubSub = new PubSub();
 
 @Resolver(() => Message)
 export class MessageResolver {
-  constructor(private messageService: MessageService) {}
+  constructor(
+    private messageService: MessageService,
+    private socketEventService: SocketEventService,
+  ) {}
 
   @Mutation(() => Message)
   @UseGuards(JwtAuthGuard)
@@ -21,9 +25,15 @@ export class MessageResolver {
     @CurrentUser() user: any,
   ): Promise<Message> {
     const message = await this.messageService.createMessage(input, user.id);
+
+    // Emit socket event for real-time updates
+    this.socketEventService.emitChatMessage(input.roomId, message);
+
+    // Publish GraphQL subscription
     pubSub.publish('messageSent', {
       messageSent: { roomId: input.roomId, message }
     });
+
     return message;
   }
 
