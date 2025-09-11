@@ -34,8 +34,8 @@ export const useRoomMessages = (roomId: string, limit = 50, offset = 0) => {
   const { data, loading, error, fetchMore, refetch } = useQuery(GET_ROOM_MESSAGES, {
     variables: { roomId, limit, offset },
     skip: !roomId,
-    fetchPolicy: 'cache-and-network', // Luôn fetch từ network và update cache
-    notifyOnNetworkStatusChange: true,
+    fetchPolicy: 'cache-first', // Ưu tiên cache để tránh re-fetch không cần thiết
+    notifyOnNetworkStatusChange: false, // Tắt notification để tránh re-render
   });
 
   // Sử dụng useMemo để tránh tạo mảng mới mỗi lần render

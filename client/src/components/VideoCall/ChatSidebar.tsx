@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useRoomMessages, useSendMessage } from '../../hooks/useGraphQL';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuthContext } from '../../providers/AuthProvider';
@@ -12,7 +12,7 @@ interface ChatSidebarProps {
   onClose: () => void;
 }
 
-export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => {
+const ChatSidebarComponent: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => {
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -33,39 +33,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
     setMessages([]);
   }, [roomId]);
 
-  // Sync messages with initial messages from GraphQL
+  // Sync messages with initial messages from GraphQL (chỉ khi component mount lần đầu)
   useEffect(() => {
-    if (reversedInitialMessages.length > 0) {
-      console.log('Syncing messages:', {
-        serverMessages: reversedInitialMessages.length,
-        localMessages: messages.length
-      });
-
-      setMessages(prevMessages => {
-        // Nếu chưa có tin nhắn nào, load từ server
-        if (prevMessages.length === 0) {
-          console.log('Loading initial messages from server');
-          return reversedInitialMessages;
-        }
-
-        // Merge tin nhắn từ server với tin nhắn local, tránh duplicate
-        const mergedMessages = [...reversedInitialMessages];
-
-        // Thêm các tin nhắn local mà chưa có trong server data
-        prevMessages.forEach(localMsg => {
-          const existsInServer = reversedInitialMessages.some(serverMsg => serverMsg.id === localMsg.id);
-          if (!existsInServer) {
-            mergedMessages.push(localMsg);
-          }
-        });
-
-        // Sort theo thời gian tạo
-        const sortedMessages = mergedMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        console.log('Merged messages:', sortedMessages.length);
-        return sortedMessages;
-      });
+    if (reversedInitialMessages.length > 0 && messages.length === 0) {
+      setMessages(reversedInitialMessages);
     }
-  }, [reversedInitialMessages]);
+  }, [reversedInitialMessages, messages.length]);
 
   useEffect(() => {
     if (socket) {
@@ -82,8 +55,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
         });
       });
 
-      socket.on('joined-chat-room', (data) => {
-        console.log('Successfully joined chat room:', data);
+      socket.on('joined-chat-room', () => {
+        // Room joined successfully - không cần log để tránh re-render
       });
 
       return () => {
@@ -96,8 +69,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
   }, [socket, roomId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Chỉ scroll khi có tin nhắn mới, tránh scroll khi load initial messages
+    if (messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    }
+  }, [messages.length]); // Chỉ trigger khi số lượng tin nhắn thay đổi
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,25 +98,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
           // Kiểm tra xem tin nhắn đã tồn tại chưa để tránh duplicate
           const exists = prev.some(msg => msg.id === result.data.sendMessage.id);
           if (exists) {
-            console.log('Message already exists, skipping add to state');
             return prev;
           }
-          console.log('Adding new message to state:', result.data.sendMessage.id);
           return [...prev, result.data.sendMessage];
         });
       }
 
       setNewMessage('');
 
-      // Refetch messages để đảm bảo sync với server
-      setTimeout(() => {
-        refetch();
-      }, 500);
-
-      // Scroll to bottom after sending message
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      // Scroll sẽ được handle tự động bởi useEffect khi messages.length thay đổi
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -222,3 +190,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ roomId, onClose }) => 
     </div>
   );
 };
+
+// Sử dụng memo để tránh re-render không cần thiết
+export const ChatSidebar = memo(ChatSidebarComponent);
