@@ -72,7 +72,7 @@ const VideoTileComponent: React.FC<VideoTileProps> = ({
         maxHeight: 'none'
       } : {}}
     >
-      {isVideoEnabled ? (
+      {isVideoEnabled && stream ? (
         <video
           ref={videoRef}
           autoPlay
@@ -103,6 +103,7 @@ const VideoTileComponent: React.FC<VideoTileProps> = ({
                 </span>
               </div>
             )}
+
           </div>
         </div>
       )}

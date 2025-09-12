@@ -7,9 +7,13 @@ import { VideoGrid } from './VideoGrid';
 import { ControlBar } from './ControlBar';
 import { ChatSidebar } from './ChatSidebar';
 import { ParticipantsList } from './ParticipantsList';
+
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Button } from '../ui/Button';
 import { useRouter } from 'next/navigation';
+import { useMutation, useSubscription } from '@apollo/client';
+import { JOIN_ROOM_MUTATION } from '../../graphql/mutations/rooms';
+import { USER_JOINED_ROOM_SUBSCRIPTION, ROOM_UPDATED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
 
 interface VideoCallRoomProps {
   roomId: string;
@@ -21,7 +25,20 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
 
   const router = useRouter();
   const { user } = useAuthContext();
-  const { room, loading: roomLoading } = useRoom(roomId);
+  const { room, loading: roomLoading, refetch: refetchRoom } = useRoom(roomId);
+  const [joinRoom] = useMutation(JOIN_ROOM_MUTATION);
+
+  // Subscribe to user joined room events
+  const { data: userJoinedData } = useSubscription(USER_JOINED_ROOM_SUBSCRIPTION, {
+    variables: { roomId },
+    skip: !roomId,
+  });
+
+  // Subscribe to room updates
+  const { data: roomUpdatedData } = useSubscription(ROOM_UPDATED_SUBSCRIPTION, {
+    variables: { roomId },
+    skip: !roomId,
+  });
   const {
     localStream,
     screenShareStream,
@@ -40,15 +57,59 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
     shareScreen,
   } = useWebRTC(roomId);
 
+  // Handle user joined room subscription
   useEffect(() => {
-    if (room) {
-      startCall();
+    if (userJoinedData?.userJoinedRoom) {
+      console.log('User joined room via subscription:', userJoinedData.userJoinedRoom);
+      // Refetch room data để cập nhật members
+      refetchRoom();
     }
+  }, [userJoinedData, refetchRoom]);
+
+  // Handle room updated subscription
+  useEffect(() => {
+    if (roomUpdatedData?.roomUpdated) {
+      console.log('Room updated via subscription:', roomUpdatedData.roomUpdated);
+      // Refetch room data để cập nhật members
+      refetchRoom();
+    }
+  }, [roomUpdatedData, refetchRoom]);
+
+  useEffect(() => {
+    const handleJoinRoom = async () => {
+      if (room && user) {
+        console.log('Current room members:', room.members);
+        console.log('Current user:', user);
+
+        // Kiểm tra xem user đã là member chưa
+        const isAlreadyMember = room.members.some((member: any) => member.user.id === user.id);
+        console.log('Is already member:', isAlreadyMember);
+
+        if (!isAlreadyMember) {
+          try {
+            console.log('User not a member, joining room via GraphQL...');
+            await joinRoom({ variables: { roomId } });
+            // Refetch room data để cập nhật members
+            await refetchRoom();
+            console.log('Successfully joined room via GraphQL');
+          } catch (error) {
+            console.error('Error joining room via GraphQL:', error);
+          }
+        }
+
+        // Start video call
+        startCall();
+      }
+    };
+
+    handleJoinRoom();
 
     return () => {
       endCall();
     };
-  }, [room?.id]); // Chỉ phụ thuộc vào room.id để tránh re-run không cần thiết
+  }, [room?.id, user?.id]); // Phụ thuộc vào room.id và user.id
+
+
 
   if (roomLoading) {
     return (
@@ -129,6 +190,7 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
                   setIsParticipantsOpen(false);
                 }
               }}
+
             />
           </div>
         </div>
@@ -153,6 +215,8 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
           </div>
         )}
       </div>
+
+
     </div>
   );
 };

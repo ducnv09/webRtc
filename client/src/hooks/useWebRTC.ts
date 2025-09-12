@@ -12,8 +12,8 @@ export const useWebRTC = (roomId: string) => {
   const [screenShareStream, setScreenShareStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remoteScreenShares, setRemoteScreenShares] = useState<Map<string, MediaStream>>(new Map());
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
 
@@ -46,22 +46,18 @@ export const useWebRTC = (roomId: string) => {
 
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
+      console.log('Received remote stream from user:', userId);
       setRemoteStreams(prev => new Map(prev.set(userId, remoteStream)));
     };
 
-    // Lấy localStream từ ref để tránh re-create function
-    const currentLocalStream = localStreamRef.current;
-    if (currentLocalStream) {
-      currentLocalStream.getTracks().forEach(track => {
-        pc.addTrack(track, currentLocalStream);
-      });
-    }
+    // Không add tracks ở đây nữa - sẽ add ở nơi gọi createPeerConnection
+    console.log('Created peer connection for user:', userId);
 
     const peerConnection: PeerConnection = { pc, userId };
     peerConnections.current.set(userId, peerConnection);
 
     return pc;
-  }, [socket, roomId]); // Bỏ localStream khỏi dependency
+  }, [socket, roomId]);
 
   const startCall = useCallback(async () => {
     try {
@@ -83,50 +79,89 @@ export const useWebRTC = (roomId: string) => {
         return;
       }
 
-      // Try to get media stream
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true, // Luôn yêu cầu video
-          audio: true, // Luôn yêu cầu audio
-        });
-
-        // Thiết lập trạng thái ban đầu cho tracks
-        const videoTrack = stream.getVideoTracks()[0];
-        const audioTrack = stream.getAudioTracks()[0];
-
-        if (videoTrack) {
-          videoTrack.enabled = isVideoEnabled;
-        }
-        if (audioTrack) {
-          audioTrack.enabled = isAudioEnabled;
-        }
-
-        setLocalStream(stream);
-        localStreamRef.current = stream;
-        console.log('Media stream obtained successfully');
-
-        // Đồng bộ trạng thái với tracks thực tế
-        if (videoTrack) setIsVideoEnabled(videoTrack.enabled);
-        if (audioTrack) setIsAudioEnabled(audioTrack.enabled);
-      } catch (mediaError) {
-        console.error('Error accessing media devices:', mediaError);
-        // Continue without media stream - user can still see others
-      }
+      // Không tự động lấy media stream khi join phòng
+      // User sẽ phải bật camera/mic thủ công
+      console.log('Joined room successfully. Camera and mic are disabled by default.');
     } catch (error) {
       console.error('Error in startCall:', error);
     }
-  }, [socket, roomId, hasJoinedRoom, isVideoEnabled, isAudioEnabled]);
+  }, [socket, roomId, hasJoinedRoom]);
 
   const toggleVideo = useCallback(async () => {
-    if (!localStream) return;
+    // Nếu không có localStream, thử tạo video stream mới
+    if (!localStream) {
+      try {
+        console.log('No local stream, trying to create video stream...');
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+
+        setLocalStream(videoStream);
+        localStreamRef.current = videoStream;
+        setIsVideoEnabled(true);
+
+        // Thêm video track vào tất cả peer connections
+        peerConnections.current.forEach(({ pc }) => {
+          const videoTrack = videoStream.getVideoTracks()[0];
+          if (videoTrack) {
+            pc.addTrack(videoTrack, videoStream);
+          }
+        });
+
+        console.log('Video stream created successfully');
+        return;
+      } catch (error) {
+        console.error('Cannot create video stream:', error);
+        alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập camera hoặc đóng các ứng dụng khác đang sử dụng camera.');
+        return;
+      }
+    }
 
     const videoTrack = localStream.getVideoTracks()[0];
-    if (!videoTrack) return;
 
+    // Nếu không có video track, thử tạo mới
+    if (!videoTrack) {
+      try {
+        console.log('No video track, trying to add video...');
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+
+        const newVideoTrack = videoStream.getVideoTracks()[0];
+        const currentAudioTrack = localStream.getAudioTracks()[0];
+
+        // Tạo stream mới với video track mới và audio track cũ
+        const updatedStream = new MediaStream();
+        if (newVideoTrack) updatedStream.addTrack(newVideoTrack);
+        if (currentAudioTrack) updatedStream.addTrack(currentAudioTrack);
+
+        // Cập nhật peer connections với video track mới
+        peerConnections.current.forEach(({ pc }) => {
+          if (newVideoTrack) {
+            pc.addTrack(newVideoTrack, updatedStream);
+          }
+        });
+
+        setLocalStream(updatedStream);
+        localStreamRef.current = updatedStream;
+        setIsVideoEnabled(true);
+        console.log('Video track added successfully');
+        return;
+      } catch (error) {
+        console.error('Cannot add video track:', error);
+        alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập camera hoặc đóng các ứng dụng khác đang sử dụng camera.');
+        return;
+      }
+    }
+
+    // Toggle video track hiện có
     if (videoTrack.enabled) {
       // Tắt video - chỉ disable track
       videoTrack.enabled = false;
       setIsVideoEnabled(false);
+      console.log('Video disabled');
     } else {
       // Bật video lại - cần tạo track mới vì track cũ có thể đã bị dừng
       try {
@@ -148,6 +183,9 @@ export const useWebRTC = (roomId: string) => {
           const sender = pc.getSenders().find(s => s.track?.kind === 'video');
           if (sender && newVideoTrack) {
             sender.replaceTrack(newVideoTrack);
+          } else if (newVideoTrack) {
+            // Nếu không có sender, thêm track mới
+            pc.addTrack(newVideoTrack, updatedStream);
           }
         });
 
@@ -156,24 +194,96 @@ export const useWebRTC = (roomId: string) => {
         setLocalStream(updatedStream);
         localStreamRef.current = updatedStream;
         setIsVideoEnabled(true);
+        console.log('Video enabled successfully');
       } catch (error) {
         console.error('Error enabling video:', error);
         // Fallback: thử enable track cũ
-        videoTrack.enabled = true;
-        setIsVideoEnabled(true);
+        try {
+          videoTrack.enabled = true;
+          setIsVideoEnabled(true);
+          console.log('Video enabled using existing track');
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          alert('Không thể bật camera. Vui lòng kiểm tra quyền truy cập camera hoặc đóng các ứng dụng khác đang sử dụng camera.');
+        }
       }
     }
   }, [localStream, peerConnections]);
 
-  const toggleAudio = useCallback(() => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsAudioEnabled(audioTrack.enabled);
+  const toggleAudio = useCallback(async () => {
+    // Nếu không có localStream, thử tạo audio stream mới
+    if (!localStream) {
+      try {
+        console.log('No local stream, trying to create audio stream...');
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: true,
+        });
+
+        setLocalStream(audioStream);
+        localStreamRef.current = audioStream;
+        setIsAudioEnabled(true);
+
+        // Thêm audio track vào tất cả peer connections
+        peerConnections.current.forEach(({ pc }) => {
+          const audioTrack = audioStream.getAudioTracks()[0];
+          if (audioTrack) {
+            pc.addTrack(audioTrack, audioStream);
+          }
+        });
+
+        console.log('Audio stream created successfully');
+        return;
+      } catch (error) {
+        console.error('Cannot create audio stream:', error);
+        alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập microphone.');
+        return;
       }
     }
-  }, [localStream]);
+
+    const audioTrack = localStream.getAudioTracks()[0];
+
+    // Nếu không có audio track, thử tạo mới
+    if (!audioTrack) {
+      try {
+        console.log('No audio track, trying to add audio...');
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: true,
+        });
+
+        const newAudioTrack = audioStream.getAudioTracks()[0];
+        const currentVideoTrack = localStream.getVideoTracks()[0];
+
+        // Tạo stream mới với audio track mới và video track cũ
+        const updatedStream = new MediaStream();
+        if (currentVideoTrack) updatedStream.addTrack(currentVideoTrack);
+        if (newAudioTrack) updatedStream.addTrack(newAudioTrack);
+
+        // Cập nhật peer connections với audio track mới
+        peerConnections.current.forEach(({ pc }) => {
+          if (newAudioTrack) {
+            pc.addTrack(newAudioTrack, updatedStream);
+          }
+        });
+
+        setLocalStream(updatedStream);
+        localStreamRef.current = updatedStream;
+        setIsAudioEnabled(true);
+        console.log('Audio track added successfully');
+        return;
+      } catch (error) {
+        console.error('Cannot add audio track:', error);
+        alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập microphone.');
+        return;
+      }
+    }
+
+    // Toggle audio track hiện có
+    audioTrack.enabled = !audioTrack.enabled;
+    setIsAudioEnabled(audioTrack.enabled);
+    console.log('Audio toggled:', audioTrack.enabled);
+  }, [localStream, peerConnections]);
 
   const shareScreen = useCallback(async () => {
     try {
@@ -269,7 +379,23 @@ export const useWebRTC = (roomId: string) => {
     if (!socket) return;
 
     socket.on('peer-joined', async ({ peerId }) => {
+      console.log('Peer joined:', peerId);
       const pc = createPeerConnection(peerId);
+
+      // Đảm bảo local stream được add vào peer connection
+      const currentLocalStream = localStreamRef.current;
+      if (currentLocalStream && currentLocalStream.getTracks().length > 0) {
+        console.log('Adding local tracks to new peer connection');
+        currentLocalStream.getTracks().forEach(track => {
+          try {
+            pc.addTrack(track, currentLocalStream);
+            console.log(`Added ${track.kind} track to new peer connection`);
+          } catch (error) {
+            console.error(`Error adding ${track.kind} track to new peer:`, error);
+          }
+        });
+      }
+
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
@@ -281,7 +407,23 @@ export const useWebRTC = (roomId: string) => {
     });
 
     socket.on('video-offer', async ({ offer, peerId }) => {
+      console.log('Received video offer from:', peerId);
       const pc = createPeerConnection(peerId);
+
+      // Đảm bảo local stream được add vào peer connection
+      const currentLocalStream = localStreamRef.current;
+      if (currentLocalStream && currentLocalStream.getTracks().length > 0) {
+        console.log('Adding local tracks to answering peer connection');
+        currentLocalStream.getTracks().forEach(track => {
+          try {
+            pc.addTrack(track, currentLocalStream);
+            console.log(`Added ${track.kind} track to answering peer connection`);
+          } catch (error) {
+            console.error(`Error adding ${track.kind} track to answering peer:`, error);
+          }
+        });
+      }
+
       await pc.setRemoteDescription(offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);

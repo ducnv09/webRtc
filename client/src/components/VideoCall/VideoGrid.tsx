@@ -42,13 +42,26 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     id: string;
   } | null>(null);
 
+  // Helper function để lấy thông tin user từ userId
+  const getUserInfo = (userId: string | null) => {
+    if (!userId) return null;
+
+    console.log('getUserInfo called with userId:', userId);
+    console.log('Available roomMembers:', roomMembers);
+
+    // Tìm user trong roomMembers
+    const member = roomMembers.find(member => member.user.id === userId);
+    console.log('Found member:', member);
+    return member ? member.user : null;
+  };
+
   // Tính tổng số streams
   const allStreams = [];
 
-  // Thêm local camera
-  if (localStream && currentUser) {
+  // Thêm local camera (luôn hiển thị current user ngay cả khi không có stream)
+  if (currentUser) {
     allStreams.push({
-      stream: localStream,
+      stream: localStream, // có thể null
       username: currentUser.username,
       avatar: currentUser.avatar,
       isLocal: true,
@@ -69,18 +82,22 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     });
   }
 
-  // Thêm remote cameras
-  Array.from(remoteStreams.entries()).forEach(([peerId, stream]) => {
-    const participant = participants.find(p => p.peerId === peerId);
-    const userInfo = participant ? getUserInfo(participant.userId) : null;
+  // Thêm tất cả participants (có stream hoặc không có stream)
+  participants.forEach((participant) => {
+    // Bỏ qua current user vì đã được thêm ở trên
+    if (participant.userId === currentUser?.id) return;
+
+    const userInfo = getUserInfo(participant.userId);
+    const stream = remoteStreams.get(participant.peerId);
+
     allStreams.push({
-      stream,
-      username: userInfo ? userInfo.username : `User ${peerId.slice(0, 8)}`,
+      stream: stream || null, // null nếu chưa có stream
+      username: userInfo ? userInfo.username : `User ${participant.peerId.slice(0, 8)}`,
       avatar: userInfo ? userInfo.avatar : null,
       isLocal: false,
       isScreenShare: false,
-      peerId,
-      id: `remote-camera-${peerId}`
+      peerId: participant.peerId,
+      id: `remote-camera-${participant.peerId}`
     });
   });
 
@@ -122,15 +139,6 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     }
   };
 
-  // Helper function để lấy thông tin user từ userId
-  const getUserInfo = (userId: string | null) => {
-    if (!userId) return null;
-
-    // Tìm user trong roomMembers
-    const member = roomMembers.find(member => member.user.id === userId);
-    return member ? member.user : null;
-  };
-
   // Nếu có video được focus - hiển thị layout focus
   if (focusedVideo) {
     const otherStreams = allStreams.filter(s => s.id !== focusedVideo.id);
@@ -147,7 +155,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
               <VideoTile
                 stream={focusedVideo.stream}
                 isLocal={focusedVideo.isLocal || false}
-                isVideoEnabled={focusedVideo.isLocal ? (focusedVideo.isScreenShare ? true : isVideoEnabled) : true}
+                isVideoEnabled={focusedVideo.isLocal ? (focusedVideo.isScreenShare ? true : (isVideoEnabled && focusedVideo.stream !== null)) : (focusedVideo.stream !== null)}
                 isAudioEnabled={focusedVideo.isLocal ? isAudioEnabled : true}
                 isScreenShare={focusedVideo.isScreenShare || false}
                 username={focusedVideo.username}
@@ -168,7 +176,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
                   <VideoTile
                     stream={videoData.stream}
                     isLocal={videoData.isLocal || false}
-                    isVideoEnabled={videoData.isLocal ? (videoData.isScreenShare ? true : isVideoEnabled) : true}
+                    isVideoEnabled={videoData.isLocal ? (videoData.isScreenShare ? true : (isVideoEnabled && videoData.stream !== null)) : (videoData.stream !== null)}
                     isAudioEnabled={videoData.isLocal ? isAudioEnabled : true}
                     isScreenShare={videoData.isScreenShare || false}
                     username={videoData.username}
@@ -196,7 +204,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             <VideoTile
               stream={videoData.stream}
               isLocal={videoData.isLocal || false}
-              isVideoEnabled={videoData.isLocal ? (videoData.isScreenShare ? true : isVideoEnabled) : true}
+              isVideoEnabled={videoData.isLocal ? (videoData.isScreenShare ? true : (isVideoEnabled && videoData.stream !== null)) : (videoData.stream !== null)}
               isAudioEnabled={videoData.isLocal ? isAudioEnabled : true}
               isScreenShare={videoData.isScreenShare || false}
               username={videoData.username}
