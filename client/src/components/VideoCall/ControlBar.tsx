@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { ExitRoomModal } from './ExitRoomModal';
 import { useLeaveRoom, useDeleteRoom } from '../../hooks/useGraphQL';
 import { useApolloClient } from '@apollo/client';
 import { GET_ROOMS } from '../../graphql/queries/rooms';
+import { useNavigation } from '../../providers/NavigationProvider';
 
 interface ControlBarProps {
   isVideoEnabled: boolean;
@@ -36,11 +36,11 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   isRoomOwner,
   roomName,
   participantCount,
-  isConnected,
+  isConnected: _isConnected,
   onToggleParticipants,
   onToggleChat,
 }) => {
-  const router = useRouter();
+  const { navigateToDashboard } = useNavigation();
   const apolloClient = useApolloClient();
   const [showExitModal, setShowExitModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -85,7 +85,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
       // The room should only be removed if it's actually deleted (no members left)
 
       onEndCall();
-      router.push('/dashboard');
+      navigateToDashboard();
     } catch (error) {
       console.error('Error leaving room:', error);
     }
@@ -109,7 +109,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
       }
 
       onEndCall();
-      router.push('/dashboard');
+      navigateToDashboard();
     } catch (error) {
       console.error('Error ending room for everyone:', error);
     }

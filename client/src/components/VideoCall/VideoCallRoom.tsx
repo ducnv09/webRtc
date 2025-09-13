@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useWebRTC } from '../../hooks/useWebRTC';
 import { useRoom } from '../../hooks/useGraphQL';
 import { useAuthContext } from '../../providers/AuthProvider';
+import { useNavigation } from '../../providers/NavigationProvider';
 import { VideoGrid } from './VideoGrid';
 import { ControlBar } from './ControlBar';
 import { ChatSidebar } from './ChatSidebar';
@@ -10,7 +11,6 @@ import { ParticipantsList } from './ParticipantsList';
 
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Button } from '../ui/Button';
-import { useRouter } from 'next/navigation';
 import { useMutation, useSubscription } from '@apollo/client';
 import { JOIN_ROOM_MUTATION } from '../../graphql/mutations/rooms';
 import { USER_JOINED_ROOM_SUBSCRIPTION, ROOM_UPDATED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
@@ -23,7 +23,7 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
 
-  const router = useRouter();
+  const { navigateToDashboard } = useNavigation();
   const { user } = useAuthContext();
   const { room, loading: roomLoading, refetch: refetchRoom } = useRoom(roomId);
   const [joinRoom] = useMutation(JOIN_ROOM_MUTATION);
@@ -125,7 +125,7 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Phòng không tồn tại</h2>
           <p className="text-gray-600 mb-4">Phòng bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
-          <Button onClick={() => router.push('/dashboard')}>
+          <Button onClick={navigateToDashboard}>
             Quay về Dashboard
           </Button>
         </div>

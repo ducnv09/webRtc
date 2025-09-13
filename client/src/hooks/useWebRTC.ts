@@ -11,7 +11,7 @@ export const useWebRTC = (roomId: string) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [screenShareStream, setScreenShareStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
-  const [remoteScreenShares, setRemoteScreenShares] = useState<Map<string, MediaStream>>(new Map());
+  const [remoteScreenShares] = useState<Map<string, MediaStream>>(new Map());
   const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);

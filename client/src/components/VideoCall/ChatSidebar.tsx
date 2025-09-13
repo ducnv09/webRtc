@@ -19,7 +19,7 @@ const ChatSidebarComponent: React.FC<ChatSidebarProps> = ({ roomId, onClose }) =
 
   const { user } = useAuthContext();
   const { socket } = useSocket('chat');
-  const { messages: initialMessages, loading, refetch } = useRoomMessages(roomId);
+  const { messages: initialMessages, loading } = useRoomMessages(roomId);
   const { sendMessage } = useSendMessage();
 
   // Sử dụng useMemo để tránh tạo mảng mới không cần thiết

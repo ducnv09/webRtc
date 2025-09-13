@@ -15,14 +15,14 @@ interface ParticipantsListProps {
 
 export const ParticipantsList: React.FC<ParticipantsListProps> = ({
   participants,
-  onlineParticipants = [],
+  onlineParticipants: _onlineParticipants = [],
   participantCount,
   onClose,
 }) => {
-  // Tạo map để kiểm tra user nào đang online
-  const onlineUserIds = new Set(
-    onlineParticipants.map(p => p.userId).filter(Boolean)
-  );
+  // Tạo map để kiểm tra user nào đang online (currently unused but may be needed for future features)
+  // const onlineUserIds = new Set(
+  //   onlineParticipants.map(p => p.userId).filter(Boolean)
+  // );
 
   // Hiển thị số lượng thành viên real-time nếu có
   const displayCount = participantCount !== undefined ? participantCount : participants.length;

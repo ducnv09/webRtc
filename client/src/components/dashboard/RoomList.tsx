@@ -7,8 +7,8 @@ import { CreateRoomModal } from './CreateRoomModal';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Button } from '../ui/Button';
 import { Room } from '../../types/room';
-import { useRouter } from 'next/navigation';
 import { useSubscription, useApolloClient } from '@apollo/client';
+import { useNavigation } from '../../providers/NavigationProvider';
 import { ROOM_CREATED_SUBSCRIPTION, ROOM_DELETED_SUBSCRIPTION, ROOM_UPDATED_GLOBAL_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
 import { GET_ROOMS } from '../../graphql/queries/rooms';
 
@@ -33,7 +33,7 @@ export const RoomList: React.FC = () => {
   const { joinRoom } = useJoinRoom();
   const { deleteRoom, loading: deleteLoading } = useDeleteRoom();
   const { user } = useAuthContext();
-  const router = useRouter();
+  const { navigateToRoom, currentView } = useNavigation();
   const apolloClient = useApolloClient();
 
   // Subscribe to new room creation
@@ -121,20 +121,21 @@ export const RoomList: React.FC = () => {
     }
   }, [updatedRoomData, refetch, apolloClient.cache]);
 
-  // Temporary: Auto-refetch every 10 seconds to ensure real-time updates
+  // Refetch when returning to dashboard view
   useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('Auto-refetching rooms...');
+    if (currentView === 'dashboard') {
+      console.log('Returned to dashboard, refreshing room list...');
       refetch();
-    }, 10000);
+    }
+  }, [currentView, refetch]);
 
-    return () => clearInterval(interval);
-  }, [refetch]);
+  // Auto-refetch fallback removed - relying on GraphQL subscriptions for real-time updates
+  // If you experience sync issues, you can re-enable the interval above
 
   const handleJoinRoom = async (roomId: string) => {
     try {
       await joinRoom({ variables: { roomId } });
-      router.push(`/room/${roomId}`);
+      navigateToRoom(roomId);
     } catch (error) {
       console.error('Error joining room:', error);
     }
@@ -171,7 +172,7 @@ export const RoomList: React.FC = () => {
     setIsJoiningNewRoom(true);
     try {
       await joinRoom({ variables: { roomId: room.id } });
-      router.push(`/room/${room.id}`);
+      navigateToRoom(room.id);
     } catch (error) {
       console.error('Error joining newly created room:', error);
       // If auto-join fails, just refresh the room list

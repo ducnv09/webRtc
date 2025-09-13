@@ -4,6 +4,7 @@ import './globals.css';
 import { ApolloProvider } from '../providers/ApolloProvider';
 import { AuthProvider } from '../providers/AuthProvider';
 import { SocketProvider } from '../providers/SocketProvider';
+import { NavigationProvider } from '../providers/NavigationProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,7 +24,9 @@ export default function RootLayout({
         <ApolloProvider>
           <AuthProvider>
             <SocketProvider>
-              {children}
+              <NavigationProvider>
+                {children}
+              </NavigationProvider>
             </SocketProvider>
           </AuthProvider>
         </ApolloProvider>
