@@ -13,7 +13,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Button } from '../ui/Button';
 import { useMutation, useSubscription } from '@apollo/client';
 import { JOIN_ROOM_MUTATION } from '../../graphql/mutations/rooms';
-import { USER_JOINED_ROOM_SUBSCRIPTION, ROOM_UPDATED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
+import { USER_JOINED_ROOM_SUBSCRIPTION, USER_LEFT_ROOM_SUBSCRIPTION, ROOM_UPDATED_SUBSCRIPTION } from '../../graphql/subscriptions/rooms';
 
 interface VideoCallRoomProps {
   roomId: string;
@@ -30,6 +30,12 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
 
   // Subscribe to user joined room events
   const { data: userJoinedData } = useSubscription(USER_JOINED_ROOM_SUBSCRIPTION, {
+    variables: { roomId },
+    skip: !roomId,
+  });
+
+  // Subscribe to user left room events
+  const { data: userLeftData } = useSubscription(USER_LEFT_ROOM_SUBSCRIPTION, {
     variables: { roomId },
     skip: !roomId,
   });
@@ -65,6 +71,15 @@ export const VideoCallRoom: React.FC<VideoCallRoomProps> = ({ roomId }) => {
       refetchRoom();
     }
   }, [userJoinedData, refetchRoom]);
+
+  // Handle user left room subscription
+  useEffect(() => {
+    if (userLeftData?.userLeftRoom) {
+      console.log('User left room via subscription:', userLeftData.userLeftRoom);
+      // Refetch room data để cập nhật members
+      refetchRoom();
+    }
+  }, [userLeftData, refetchRoom]);
 
   // Handle room updated subscription
   useEffect(() => {
